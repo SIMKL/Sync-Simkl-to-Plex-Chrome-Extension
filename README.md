@@ -1,0 +1,1 @@
+# Sync-Simkl-to-Plex-Chome-Extension
