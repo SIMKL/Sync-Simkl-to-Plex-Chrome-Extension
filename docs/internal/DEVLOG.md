@@ -1,0 +1,94 @@
+# devlog
+
+This document describes the development workflow that went into this project.
+
+#### `3/2/2022`
+
+- `@phanirithvij` (4 hrs total)
+  - Started with reading plex oauth docs, found out they don't exist
+  - https://forums.plex.tv/t/is-there-no-official-documented-plex-api/647488
+  - https://forums.plex.tv/t/authenticating-with-plex/609370
+  - https://github.com/Arcanemagus/plex-api/wiki/Plex-Web-API-Overview
+  - The third resource does username and password authentication, and requesting user to enter third-party credentials on our client when oauth exists is not a good idea.
+  - Followed the second resource as it is by one of the plex developers
+  - Implemented plex oauth using polling (mentioned) in resource #2.
+  - Wanted to try it without using polling as polling frequency of 1 req per sec hit 429 in just ~20 secs.
+  - Tried with `forwardUrl: "chrome-extension://<ext_dev_id>/popup.html"` but plex oauth auto redirects to plex.tv so it seems like it doesn't allow anything except `http{s}` schemes for `forwardUrl`.
+  - So tried with a mock node.js app running at 127.0.0.1:8080 `forwardUrl: "127.0.0.1:8080"` and it worked but there was no query param for authToken after redirect, something like `?code=<>`. It was a simple redirect with `referer` header as plex.tv.
+  - Created a placeholder html UI to test plex oauth.
+  - Works with polling but if extension popup is closed it will cancel all http requests thus when re-opening need to start the oauth process again.
+  - Used background service worker for handling oauth requests. Thus popup closing won't effect the oauth flow.
+- `@andrewmasyk`
+  - Started working on the extension UI design on Adobe xd.
+  - Finished working on design
+
+---
+
+#### `4/2/2022`
+
+- `@phanirithvij` (7 hrs total)
+
+  - Worked on chrome extension's (crx) on install open popup in a full tab.
+  - Worked on all the error cases for plex oauth API responses.
+  - Tried experimenting with popup style oauth (like spotify)
+    - crx popup.js does a `chrome.runtime.sendMessage` call to start the plex oauth flow in the service worker.
+    - From now on it is all done in the service worker script.
+    - open a new window using `chrome.windows.create` with height and width params.
+    - start a `setInterval` call to see when plex pincode times out (it is 1800 sec)
+    - register on window removed callback to monitor when the window is closed.
+    - then return `true` back to crx client js (popup.js) via a response to `chrome.runtime.sendMessage`
+  - Determined the popup flow is not ideal because users are generally against popups and also the url bar needs to be shown to not allow for any phishing attacks.
+  - Found `chrome.windows.create` when called via the SW script can't show the url bar not matter what.
+  - Tried using the normal `window.open` js api from the popup.js script as `window` is not accessible to the SW (service worker)
+  - But now the state can be lost when the crx popup is closed.
+    - The same issue as above, if crx popup is closed in the middle of a task/request/popup flow the plex popup window stays open and we need to redo the oauth from start on crx popup re-open.
+    - So no choice but to use SW to handle the window opening.
+  - But now we have to implement bi-directional message passing from SW and crx client js to listen to when the window closes.
+  - Switched back to the trying out the redirect flow to avoid this added complexity.
+  - In the redirect flow, the idea was for the crx to intercept a request made to to particual redirect url (`forwardUrl`) like [this](https://simkl.com/apps/plex/sync/connected) `https://simkl.com/apps/plex/sync/connected` and open `popup.html` in full tab.
+    - Tried implemented it using chrome manifest `webRequest` and `webRequestBlocking` for `*://simkl.com/` but it turns out that this way of doing things was deprecated in manifest `v2`.
+    - Discussed about this and concluded manifest `v2` was not an option as `v2` reached eol on `17-1-2022`. [Ref](https://developer.chrome.com/docs/extensions/mv3/mv2-sunset/)
+  - Decided to stick with popup method for now.
+  - Worked on some UI and css, added darkmode.js to allow switching themes.
+    - Discussed and concluded to stick with dark theme and removed the darkmode switching logic
+  - Turns out plex oauth requires the same domain as redirect url for oauth endpoint as the origin header of initiator (first pin-allocation request) or it will reject the oauth request.
+    - So can't use `simkl.com/.../connected` as the `forwardUrl` when doing requests from the crx which sets origin as `chrome-extension://<ext_dev_id>`
+      - Need to proxy the plex oauth requests to be able to use `simkl.com/.../connected` as `forwardUrl`.
+      - I decided to stick with `http://<ext_dev_id>/popup.html#plex-oauth` (note the http protocol) as the `forwardUrl` even if it is invalid. As it can be intercepted immediately and can be redirected to `chrome-extension://<ext_dev_id>/popup.html#plex-oauth`
+    - I tried the url intercepting again after reading manifest `v3` docs on how to do it.
+      - Need to use [`chrome.declarativeNetRequest`](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#example)
+      - Implemented it and hit a roadblock because chrome shows `ERR_BLOCKED_BY_CLIENT` page when it intercepts the request in the middle of a redirect (url redirect) which plex does. A related [chrome bug](https://groups.google.com/a/chromium.org/g/chromium-extensions/c/QJ3y_EhkhG4).
+      - Got rid of the `declarativeNetRequest` handling.
+      - Decided to intercept the tabs directly instead. Using `chrome.tabs.onUpdated.addListener`
+        - This requires the `tabs` manifest permission if we need info on the tab's url, title
+        - We require the url to check if it is `http://<ext_dev_id>/popup.html#plex-oauth`
+        - So added that to the manifest
+      - Redirect flow works now. But there is a catch because of how plex oauth flow works.
+        - Plex doesn't return `?code=<>` so we need to request a specific endpoint to get the `authToken` after entering the extension again.
+        - For this the logic coded was save `pincode,pinid` to localstorage after the intial request and before the redirect if the url hash is `plex-oauth` then load `pincode,pinid` from localstorage and get the `authToken` and remove them from localstorage and remove the url hash, i.e., `popup.html`
+        - TODO: Also need to add expire time to localstorage to invalidate expired `pincode,pinid` from localstorage.
+    - Got the html UI from Andrew and connected the plex oaut flow to the `connect plex` button, via the css classlist toggle logic as suggested by Andrew.
+    - Sent PR [#1](https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension/pull/1)
+
+- `@andrewmasyk`
+  - Started working on the html/css for chrome extension.
+  - Finished working with the html/css
+  - Chrome extension disallows the popup dimensions to exceed `800px x 600px` and the final height was `662px`
+  - Made the changes required to get it to `599px`
+    - FIXME: But it still shows a scroll bar - @phanirithvij
+
+---
+
+####
+
+#### Notes (`@phanirithvij`)
+
+- Oauth endpoints need to be handled in background.js because popup might close and we might lose the state.
+- Never use js `innerHTML` to modify content but use css vars
+  - This in combination with css `::before{content}` allows to switch translations, views etc., effortlessly.
+- Try gitignore client_id+secret in the repo.
+  - Chrome Extension policy disallows js obfuscation.
+- References:
+  - [Netflix enhancer](https://chrome.google.com/webstore/detail/enhancer-for-netflix-crun/dbpjfmehfpcgmlpfnfilcnhbckmecmca)
+  - [Plex-Web-API-Overview](https://github.com/Arcanemagus/plex-api/wiki/Plex-Web-API-Overview)
+  - [DeWolfRobin/ReverseSyncPlex](https://github.com/DeWolfRobin/ReverseSyncPlex)
