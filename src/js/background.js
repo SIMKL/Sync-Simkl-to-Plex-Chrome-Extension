@@ -213,7 +213,7 @@ let __OAUTH__ = {
     return data;
   };
 
-  const plexOauthStart = async (responseChannel) => {
+  const plexOauthStart = async (responseChannel, inPopup) => {
     let resp = { code: null, id: null };
     let localdat = await chromeLocalGetAsync();
     const { pincode, pinid } = localdat;
@@ -242,9 +242,10 @@ let __OAUTH__ = {
         return;
       }
     } else {
+      // oauth first step
       resp = await plexRequestPIN();
       if ("error" in resp) {
-        makeErrorResponse(resp);
+        responseChannel(makeErrorResponse(resp));
         return;
       }
       chrome.storage.local.set(
@@ -257,10 +258,16 @@ let __OAUTH__ = {
         }
       );
     }
-    // open url in new tab
     let oauthUrl = plexLoginURI(resp["code"]);
-    chrome.tabs.update({ url: oauthUrl });
     console.debug("Plex oauth URL:", oauthUrl);
+    if (inPopup) {
+      // open url in new tab
+      chrome.tabs.create({ url: oauthUrl });
+    } else {
+      // open url in same tab
+      chrome.tabs.update({ url: oauthUrl });
+    }
+    return true;
     /* (() => {
       // https://stackoverflow.com/a/10341102
       chrome.tabs.create(
@@ -339,13 +346,15 @@ let __OAUTH__ = {
 
 // TODO: Periodic background sync
 
-// Registering callbacks
+// Registering callbacks (calls)
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.debug("[SW] Got message:", message, "from:", sender);
   switch (message.type) {
     case "call":
       if (message.method == "oauth.plex.plexOauthStart") {
-        __OAUTH__.plex["plexOauthStart"](sendResponse);
+        let inPopup = message.inPopup;
+        __OAUTH__.plex["plexOauthStart"](sendResponse, inPopup);
         // https://stackoverflow.com/a/57608759
         return true;
       } else if (message.method == "oauth.plex.plexCheckTokenValiditiy") {
@@ -354,10 +363,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return true;
       }
       break;
+    case "action":
+      // ignore actions they will be handled by
+      // all instances of popup.js
+      break;
     default:
       console.debug("Unknown message type", message.type);
       return true;
   }
+  return true;
 });
 
 chrome.tabs.onUpdated.addListener((tabId, _changeInfo, tab) => {

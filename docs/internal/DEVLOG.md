@@ -79,7 +79,21 @@ This document describes the development workflow that went into this project.
 
 ---
 
-####
+#### `5/2/2022`
+
+- `@phanirithvij` (3 hrs)
+  - Added this devlog file
+  - Added support for allowing multiple instances to recieve ui updates
+    - It is done using `chrome.runtime.sendMessage` and `chrome.runtime.onMessage.addListener`.
+    - sendMessage broadcasts it
+    - onMessage listener listens for any _external_ messages.
+    - sendMessage calls from same js thread won't be recieved in that thread's message listener
+    - This leads to slight code duplication
+    - Need to do required action using the message and do `sendMessage` so others can do the exact same action with the recieved message.
+    - Background script also recieves these messages but that can't be avoided because `onMessage` doesn't support any filtering.
+      - But the events can be seperated to allow popup.js and background script to distinguish what's what.
+      - This was done using two types of events specifically `call` and `action`. `call` is for requesting something from background script. `action` is for self and broadcasts (all available instances).
+      - If we make sure every `action` is idempotent (doesn't have any side effects on multiple calls) then this seperation won't taint the extension's flow.
 
 #### Notes (`@phanirithvij`)
 
