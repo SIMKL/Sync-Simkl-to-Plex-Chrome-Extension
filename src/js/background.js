@@ -1,74 +1,89 @@
+// Extension on install register
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.tabs.create({
     url: chrome.runtime.getURL("popup.html#fresh-install"),
   });
 });
 
-{
-  // TODO: remove popup for plex oauth and use this
-  /* chrome.webRequest.onBeforeRequest.addListener(
-  function (details) {
-    return {
-      redirectUrl: chrome.runtime.getURL("popup.html#full"),
-    };
-  },
-  { urls: ["*://simkl.com/apps/plex/sync/connected?sync-plex"] },
-  ["blocking"]
-); */
-}
-
 // Global state
 
-let __OAUTH__ = {
-  plex: {},
-  simkl: {},
+// api methods to use globally
+
+let __API__ = {
+  plex: {
+    oauth: {},
+    apis: {},
+  },
+  simkl: {
+    oauth: {},
+    apis: {},
+  },
+};
+
+// this is used to intercept and open the extension page
+const HttpCrxRedirectStub = `http://${chrome.runtime.id}`;
+
+// Utility functions
+
+const stringify = (json) => {
+  return Object.keys(json)
+    .map(function (key) {
+      return encodeURIComponent(key) + "=" + encodeURIComponent(json[key]);
+    })
+    .join("&");
+};
+
+const chromeSyncGetAsync = async (key) => {
+  // https://stackoverflow.com/a/58491883
+  var p = new Promise(function (resolve, reject) {
+    chrome.storage.sync.get(key, function (data) {
+      resolve(data);
+    });
+  });
+  return await p;
+};
+
+const chromeLocalGetAsync = async (key) => {
+  // https://stackoverflow.com/a/58491883
+  var p = new Promise(function (resolve, reject) {
+    chrome.storage.local.get(key, function (data) {
+      resolve(data);
+    });
+  });
+  return await p;
+};
+
+const makeErrorResponse = (data) => {
+  if (typeof data === "string") {
+    return { error: data };
+  }
+  return data;
+};
+
+const makeSuccessResponse = (data) => {
+  if (typeof data === "string") {
+    return { message: data };
+  }
+  return data;
 };
 
 /*
-  Plex: Oauth handling
-  Guide to follow: https://forums.plex.tv/t/authenticating-with-plex/609370
+  Plex: API handling
+  Guide for Oauth: https://forums.plex.tv/t/authenticating-with-plex/609370
 */
+
+const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
+
 (() => {
-  // TODO: Get plexToken from chrome.storage.sync
-  // Check whether it's valid and request user to login again if not
-
   // Extension client Config for plex oauth
-
   // This is shown to user according to plex docs
   const PlexClientName = "SimklPlexDevTest1";
   // This can be anything random but needs to be unique forever
   const PlexClientID = "b7ca5397-2ba6-4c93-977b-5fca205dd322";
   // Plex login timeout in millisecs
-  const PlexLoginTimeout = 600 * 1000;
+  // const PlexLoginTimeout = 600 * 1000;
   // const plexLoginTimeout = 1800 * 1000; // plex default login timeout
-
-  const stringify = (json) => {
-    return Object.keys(json)
-      .map(function (key) {
-        return encodeURIComponent(key) + "=" + encodeURIComponent(json[key]);
-      })
-      .join("&");
-  };
-
-  const chromeSyncGetAsync = async (key) => {
-    // https://stackoverflow.com/a/58491883
-    var p = new Promise(function (resolve, reject) {
-      chrome.storage.sync.get(key, function (data) {
-        resolve(data);
-      });
-    });
-    return await p;
-  };
-
-  const chromeLocalGetAsync = async (key) => {
-    // https://stackoverflow.com/a/58491883
-    var p = new Promise(function (resolve, reject) {
-      chrome.storage.local.get(key, function (data) {
-        resolve(data);
-      });
-    });
-    return await p;
-  };
 
   const plexCheckTokenValiditiy = async (responseChannel, token) => {
     if (!token) {
@@ -181,11 +196,11 @@ let __OAUTH__ = {
   };
 
   const plexLoginURI = (plexPINcode) => {
-    console.debug(`http://${chrome.runtime.id}/popup.html#plex-oauth`);
+    console.debug(PlexRedirectURI);
     const authAppUrl =
       "https://app.plex.tv/auth#?" +
       stringify({
-        forwardUrl: `http://${chrome.runtime.id}/popup.html#plex-oauth`,
+        forwardUrl: PlexRedirectURI,
         clientID: PlexClientID,
         code: plexPINcode,
         "context[device][product]": PlexClientName,
@@ -199,32 +214,21 @@ let __OAUTH__ = {
     return authAppUrl;
   };
 
-  const makeErrorResponse = (data) => {
-    if (typeof data === "string") {
-      return { error: data };
-    }
-    return data;
-  };
-
-  const makeSuccessResponse = (data) => {
-    if (typeof data === "string") {
-      return { message: data };
-    }
-    return data;
-  };
-
   const plexOauthStart = async (responseChannel, inPopup) => {
     let resp = { code: null, id: null };
     let localdat = await chromeLocalGetAsync();
-    const { pincode, pinid } = localdat;
-    console.debug("localstorage:", localdat);
-    if (!!pincode && !!pinid) {
-      resp["code"] = pincode;
-      resp["id"] = pinid;
-      chrome.storage.local.set({ pincode: null, pinid: null });
+    const { plexPinCode, plexPinID } = localdat;
+    console.debug("localStorage:", localdat);
+    if (!!plexPinCode && !!plexPinID) {
+      // oauth second step
+      resp["code"] = plexPinCode;
+      resp["id"] = plexPinID;
+      chrome.storage.local.set({ plexPinCode: null, plexPinID: null });
       let response = await plexGetAuthToken(resp["id"], resp["code"]);
       console.debug("Plex authToken response:", response);
       if ("errors" in response) {
+        // TODO: this might be because pincode and pinid expired
+        // they stayed in the local storage for too long
         // failed to authenticate the user
         // show error message
         responseChannel(makeErrorResponse(response));
@@ -237,27 +241,22 @@ let __OAUTH__ = {
           makeSuccessResponse({ authToken: response["authToken"] })
         );
         return;
-      } else {
-        responseChannel(makeErrorResponse(response));
-        return;
       }
-    } else {
-      // oauth first step
-      resp = await plexRequestPIN();
-      if ("error" in resp) {
-        responseChannel(makeErrorResponse(resp));
-        return;
-      }
-      chrome.storage.local.set(
-        {
-          pincode: resp["code"],
-          pinid: resp["id"],
-        },
-        () => {
-          chrome.storage.local.get().then((x) => console.debug("set", x));
-        }
-      );
+      responseChannel(makeErrorResponse(response));
+      return;
     }
+    // oauth first step
+    resp = await plexRequestPIN();
+    if ("error" in resp) {
+      responseChannel(makeErrorResponse(resp));
+      return;
+    }
+    // save to local storage
+    chrome.storage.local.set({
+      plexPinCode: resp["code"],
+      plexPinID: resp["id"],
+    });
+
     let oauthUrl = plexLoginURI(resp["code"]);
     console.debug("Plex oauth URL:", oauthUrl);
     if (inPopup) {
@@ -270,12 +269,166 @@ let __OAUTH__ = {
     return true;
   };
 
-  __OAUTH__.plex["plexOauthStart"] = plexOauthStart;
-  __OAUTH__.plex["plexCheckTokenValiditiy"] = plexCheckTokenValiditiy;
-  __OAUTH__.plex["plexGetAuthToken"] = plexGetAuthToken;
+  __API__.plex.oauth["plexOauthStart"] = plexOauthStart;
+  __API__.plex.oauth["plexCheckTokenValiditiy"] = plexCheckTokenValiditiy;
+  __API__.plex.oauth["plexGetAuthToken"] = plexGetAuthToken;
 })();
 
-// TODO: Simkl: Oauth handling
+// Simkl: API handling
+const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
+
+(() => {
+  // TODO: github actions and repo secrets for these two
+
+  // const simklGetAllItemsFullSync =
+  const simklGetAllItems = async (responseChannel, dateFrom, token) => {
+    let types = ["shows", "movies", "anime"];
+    let responses = await Promise.all(
+      types.map((type) =>
+        fetch(
+          `https://api.simkl.com/sync/all-items/${type}?` +
+            "episode_watched_at=yes" +
+            (!dateFrom ? "" : `&date_from=${dateFrom}`) +
+            (type == "movies" ? "" : "&extended=full"),
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+              "simkl-api-key": SimklClientID,
+            },
+          }
+        )
+      )
+    );
+    responses.forEach(async (resp, i) => {
+      if (resp.status == 200) {
+        let items = await resp.json();
+        console.debug("Got items: ", types[i], resp.headers);
+      }
+    });
+    return true;
+  };
+
+  const simklGetLastActivity = async (responseChannel, token) => {
+    let resp = await fetch("https://api.simkl.com/sync/activities", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "simkl-api-key": SimklClientID,
+      },
+    });
+    if (resp.status == 200) {
+      let data = await resp.json();
+      console.debug("Last Activity:", data);
+      !!responseChannel && responseChannel(makeSuccessResponse(data));
+      return true;
+    }
+    console.debug(resp.status, resp.statusText);
+    let data = await resp.text();
+    console.debug("Error: Last Activity:", data);
+    !!responseChannel && responseChannel(makeErrorResponse(data));
+    return false;
+  };
+
+  const simklCheckTokenValiditiy = async (responseChannel, token) => {
+    if (!!token) {
+      let valid = await simklGetLastActivity(null, token);
+      responseChannel(makeSuccessResponse({ authToken: token, valid }));
+      return;
+    }
+    let syncedData = await chromeSyncGetAsync("simklOauthToken");
+    console.debug("Simkl:TokenValidatity:localstorage", syncedData);
+    let { simklOauthToken } = syncedData;
+    if (!!simklOauthToken) {
+      let valid = await simklGetLastActivity(null, simklOauthToken);
+      responseChannel(
+        makeSuccessResponse({ authToken: simklOauthToken, valid })
+      );
+      return;
+    }
+    // no token provided or found in localstorage
+    responseChannel(makeErrorResponse({ authToken: null, valid: false }));
+    return;
+  };
+
+  const simklGetAuthToken = async (code) => {
+    let req = {
+      code: code,
+      client_id: SimklClientID,
+      client_secret: SimklClientSecret,
+      redirect_uri: SimklRedirectURI,
+      grant_type: "authorization_code",
+    };
+    return await (
+      await fetch("https://api.simkl.com/oauth/token", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(req),
+      })
+    ).json();
+  };
+
+  const simklLoginURI = () => {
+    // Docs: https://simkl.docs.apiary.io/#reference/authentication-oauth-2.0/authorize-application?console=1
+    return (
+      "https://simkl.com/oauth/authorize?" +
+      stringify({
+        response_type: "code",
+        client_id: SimklClientID,
+        redirect_uri: SimklRedirectURI,
+      })
+    );
+  };
+
+  const simklOauthStart = async (responseChannel, inPopup) => {
+    let localdat = await chromeLocalGetAsync();
+    console.debug("localStorage:", localdat);
+    const { simklPinCode } = localdat;
+
+    if (!!simklPinCode) {
+      chrome.storage.local.set({ simklPinCode: null });
+      let response = await simklGetAuthToken(simklPinCode);
+      console.debug("Simkl access_token response:", response);
+      if ("error" in response) {
+        // failed to authenticate the user
+        // TODO: this might be because code expired
+        // it stayed in the local storage for too long
+        responseChannel(makeErrorResponse(response));
+        return;
+      }
+      if (response["access_token"] != null) {
+        // got the plex authtoken
+        // successfully logged in
+        responseChannel(
+          makeSuccessResponse({ authToken: response["access_token"] })
+        );
+        return;
+      }
+      responseChannel(makeErrorResponse(response));
+      return;
+    }
+
+    let appAuthorizeUrl = simklLoginURI();
+    console.debug("Simkl application auth URL:", appAuthorizeUrl);
+    if (inPopup) {
+      // open url in new tab
+      chrome.tabs.create({ url: appAuthorizeUrl });
+    } else {
+      // open url in same tab
+      chrome.tabs.update({ url: appAuthorizeUrl });
+    }
+    return true;
+  };
+
+  __API__.simkl.oauth["simklOauthStart"] = simklOauthStart;
+  __API__.simkl.oauth["simklCheckTokenValiditiy"] = simklCheckTokenValiditiy;
+
+  __API__.simkl.apis["simklGetLastActivity"] = simklGetLastActivity;
+  __API__.simkl.apis["simklGetAllItems"] = simklGetAllItems;
+})();
 
 // TODO: Periodic background sync
 
@@ -285,15 +438,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.debug("[SW] Got message:", message, "from:", sender);
   switch (message.type) {
     case "call":
-      if (message.method == "oauth.plex.plexOauthStart") {
-        let inPopup = message.inPopup;
-        __OAUTH__.plex["plexOauthStart"](sendResponse, inPopup);
-        // https://stackoverflow.com/a/57608759
-        return true;
-      } else if (message.method == "oauth.plex.plexCheckTokenValiditiy") {
-        let token = message.token;
-        __OAUTH__.plex["plexCheckTokenValiditiy"](sendResponse, token);
-        return true;
+      switch (message.method) {
+        case "oauth.plex.plexOauthStart":
+          __API__.plex.oauth["plexOauthStart"](sendResponse, message.inPopup);
+          // https://stackoverflow.com/a/57608759
+          return true;
+        case "oauth.plex.plexCheckTokenValiditiy":
+          __API__.plex.oauth["plexCheckTokenValiditiy"](
+            sendResponse,
+            message.token
+          );
+          return true;
+        case "oauth.simkl.simklOauthStart":
+          __API__.simkl.oauth["simklOauthStart"](sendResponse, message.inPopup);
+          // https://stackoverflow.com/a/57608759
+          return true;
+        case "oauth.simkl.simklCheckTokenValiditiy":
+          __API__.simkl.oauth["simklCheckTokenValiditiy"](
+            sendResponse,
+            message.token
+          );
+          return true;
+        case "apis.simkl.simklGetLastActivity":
+          __API__.simkl.apis["simklGetLastActivity"](
+            sendResponse,
+            message.token
+          );
+          return true;
+        case "apis.simkl.simklGetAllItems":
+          __API__.simkl.apis["simklGetAllItems"](
+            sendResponse,
+            message.dateFrom,
+            message.token
+          );
+          return true;
+
+        default:
+          console.debug("Unknown message call", message);
+          break;
       }
       break;
     case "action":
@@ -302,15 +484,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
     default:
       console.debug("Unknown message type", message.type);
-      return true;
+      break;
   }
   return true;
 });
 
-chrome.tabs.onUpdated.addListener((tabId, _changeInfo, tab) => {
-  if (tab.url == `http://${chrome.runtime.id}/popup.html#plex-oauth`) {
-    chrome.tabs.update(tabId, {
-      url: chrome.runtime.getURL("/popup.html#plex-oauth"),
-    });
-  }
+// Intercept and redirect to chrome-extension://
+
+function handleOauthIntercepts() {
+  return ({ tabId, url }) => {
+    if (url == PlexRedirectURI) {
+      chrome.tabs.update(tabId, {
+        url: chrome.runtime.getURL("/popup.html#plex-oauth"),
+      });
+    } else if (url.startsWith(SimklRedirectURI)) {
+      chrome.tabs.update(tabId, {
+        url: chrome.runtime.getURL("/popup.html#simkl-oauth"),
+      });
+      let parts = url.split("?");
+      let simklPinCode = parts[parts.length - 1].split("=")[1];
+      console.debug(`got pincode for simkl: ${simklPinCode}`);
+      chrome.storage.local.set({
+        simklPinCode: simklPinCode,
+      });
+    }
+  };
+}
+
+// This had to be done because declarativeNetRequest is not working
+// in combination with server redirect (explained in devlog.md/4-2-22)
+
+// also capture errors because for plex ?code= is making onBeforeNavigate take way too long
+chrome.webNavigation.onErrorOccurred.addListener(handleOauthIntercepts(), {
+  url: [{ urlPrefix: HttpCrxRedirectStub }],
+});
+
+chrome.webNavigation.onBeforeNavigate.addListener(handleOauthIntercepts(), {
+  url: [{ urlPrefix: HttpCrxRedirectStub }],
 });

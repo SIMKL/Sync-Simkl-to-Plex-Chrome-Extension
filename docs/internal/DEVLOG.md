@@ -95,6 +95,25 @@ This document describes the development workflow that went into this project.
       - This was done using two types of events specifically `call` and `action`. `call` is for requesting something from background script. `action` is for self and broadcasts (all available instances).
       - If we make sure every `action` is idempotent (doesn't have any side effects on multiple calls) then this seperation won't taint the extension's flow.
 
+#### `6/2/2022`
+
+- `@phanirithvij` (4:15 hrs)
+  - [x] Simkl Oauth methods
+  - [x] Connect to UI
+  - [x] Implement oauth flow for simkl
+  - [ ] Refactor to use classes
+    - Didn't happen yet
+  - Removed `tabs` permission from the manifest and started using `chrome.webNavigation.onBeforeNavigate` and `chrome.webNavigation.onErrorOccurred` instead.
+    - These were seo, stackoverflow unfriendly and I only stumbled across them while reading docs about background pages to know how to get periodic background sync to work [here](https://developer.chrome.com/docs/extensions/mv2/background_pages/#filters)
+  - Discussed on how to do the full initial sync for all the user items from the simkl api.
+    - Conclusion was to make 3 api calls one for each media type (`anime, shows, movies`)
+    - To reduce each network call's load on the server and browser processing time.
+    - This had to be done because there is not pagination support for the all-times endpoint.
+  - TODO: @ekleop may need to add a server-time field to the response of all-times api call.
+    - Or use a common time server for everything to solve the age old problem of not trusting client's clock time for anything important.
+    - This is to avoid errors and corrupting any resources (user's plex library in this case)
+  - Started working on these simkl activity api calls
+
 #### Notes (`@phanirithvij`)
 
 - Oauth endpoints need to be handled in background.js because popup might close and we might lose the state.

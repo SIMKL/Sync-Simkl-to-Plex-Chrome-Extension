@@ -16,7 +16,7 @@ function removeWindowHash() {
 }
 
 // https://stackoverflow.com/a/16861050
-const popupCenter = ({ url, title, w, h }) => {
+/* const popupCenter = ({ url, title, w, h }) => {
   // Fixes dual-screen position                             Most browsers      Firefox
   const dualScreenLeft =
     window.screenLeft !== undefined ? window.screenLeft : window.screenX;
@@ -53,105 +53,14 @@ const popupCenter = ({ url, title, w, h }) => {
   if (window.focus) newWindow.focus();
   return newWindow;
 };
-
-const setUIPlexConnected = () => {
-  document.body.classList.add("connected-plex");
-};
-
-const setUIPlexDisconnected = () => {
-  document.body.classList.remove("connected-plex");
-};
-
-const saveAuthToken = (authToken, callback) => {
-  chrome.storage.sync.set({ plexOauthToken: authToken }, callback);
-};
-
-const logoutPlex = () => {
-  let message = {
-    action: "oauth.plex.logout",
-    type: "action",
-  };
-  // broadcast logout event to all clients
-  chrome.runtime.sendMessage(message);
-  finishLogout(message);
-};
-
-const finishLogout = (_message) => {
-  chrome.storage.sync.set({ plexOauthToken: null }, () => {
-    setUIPlexDisconnected();
-  });
-};
-
-const startPlexOauth = () => {
-  console.debug("Starting plex authentication flow");
-  chrome.runtime.sendMessage(
-    {
-      type: "call",
-      method: "oauth.plex.plexOauthStart",
-      inPopup:
-        // https://stackoverflow.com/a/8921196
-        chrome.extension.getViews({ type: "popup" })[0] !== undefined,
-    },
-    (response) => {
-      let message = {
-        action: "oauth.plex.login",
-        type: "action",
-        ...response,
-      };
-      // send broadcast message to others
-      chrome.runtime.sendMessage(message);
-      finishPlexOauth(message);
-    }
-  );
-  // response will be sent back via chrome.tabs.sendMessage
-  // it can be read from chrome.runtime.onMessage (handling it below)
-};
-
-const finishPlexOauth = (message) => {
-  if ("authToken" in message && message.authToken != null) {
-    // if successful
-    setUIPlexConnected();
-    saveAuthToken(message.authToken);
-    return true;
-  }
-  // TODO: show errors
-  // setUIErrorMessage(message.error);
-  console.debug(message);
-};
-
-const checkPlexAuthTokenValidity = () => {
-  // broadcast not needed for this
-  chrome.runtime.sendMessage(
-    { type: "call", method: "oauth.plex.plexCheckTokenValiditiy" },
-    (response) => {
-      const { authToken, valid } = response;
-      if (valid) {
-        // set plex button ui accordingly
-        setUIPlexConnected();
-        saveAuthToken(authToken);
-      } else {
-        console.debug(response);
-      }
-    }
-  );
-};
+ */
 
 const onLoad = () => {
   const plexBtn = document.querySelector("sync-buttons-button.Plex");
+  const simklBtn = document.querySelector("sync-buttons-button.Simkl");
+  const syncBtn = document.querySelector("sync-form-button");
 
-  if (window.location.hash == "#plex-oauth") {
-    // this won't request new pin, code this time
-    startPlexOauth();
-    // remove #plex-oauth from url to be safe
-    removeWindowHash();
-  } else {
-    chrome.storage.local.set({ pincode: null, pinid: null });
-    checkPlexAuthTokenValidity();
-  }
-
-  // request service worker to validate and return plex oauth token
-
-  plexBtn.addEventListener("click", (e) => {
+  plexBtn.addEventListener("click", (_) => {
     chrome.storage.sync.get({ plexOauthToken: null }, ({ plexOauthToken }) => {
       console.debug(`plexOauthToken is: ${plexOauthToken}`);
       if (!plexOauthToken) {
@@ -161,13 +70,48 @@ const onLoad = () => {
       }
     });
   });
+  simklBtn.addEventListener("click", (_) => {
+    chrome.storage.sync.get(
+      { simklOauthToken: null },
+      ({ simklOauthToken }) => {
+        console.debug(`simklOauthToken is: ${simklOauthToken}`);
+        // console.debug(e);
+        if (!simklOauthToken) {
+          startSimklOauth();
+        } else {
+          logoutSimkl();
+        }
+      }
+    );
+  });
+  syncBtn.addEventListener("click", (_) => {
+    //
+  });
+
+  if (window.location.hash == "#plex-oauth") {
+    // this won't request new pin, code this time
+    startPlexOauth();
+    // remove #plex-oauth from url to be safe
+    removeWindowHash();
+  } else {
+    // request service worker to validate and save oauth tokens
+    checkPlexAuthTokenValidity();
+  }
+  if (window.location.hash == "#simkl-oauth") {
+    startSimklOauth();
+    // remove #simkl-oauth from url to be safe
+    removeWindowHash();
+  } else {
+    // request service worker to validate and save oauth tokens
+    checkSimklAuthTokenValidity();
+  }
 };
 
 window.addEventListener("load", onLoad);
 
-// Registering event handlers (actions)
+// Registering UI event handlers (actions)
 
-chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender) => {
   console.debug("Got message:", message, "from:", sender);
   switch (message.type) {
     case "action":
@@ -176,7 +120,13 @@ chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
           finishPlexOauth(message);
           break;
         case "oauth.plex.logout":
-          finishLogout(message);
+          finishLogoutPlex(message);
+          break;
+        case "oauth.simkl.login":
+          finishSimklOauth(message);
+          break;
+        case "oauth.simkl.logout":
+          finishLogoutSimkl(message);
           break;
         default:
           console.debug("Unknown message format", message);
