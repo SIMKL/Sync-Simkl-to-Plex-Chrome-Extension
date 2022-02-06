@@ -15,6 +15,15 @@ function removeWindowHash() {
   );
 }
 
+function debounce(func, timeout = 400) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      func.apply(this, args);
+    }, timeout);
+  };
+}
 // https://stackoverflow.com/a/16861050
 /* const popupCenter = ({ url, title, w, h }) => {
   // Fixes dual-screen position                             Most browsers      Firefox
@@ -55,10 +64,29 @@ function removeWindowHash() {
 };
  */
 
+const restartLibrarySync = (durationHrs = 12) => {
+  if (!durationHrs) {
+    durationHrs = 12;
+  }
+  stopLibrarySync();
+  chrome.alarms.create("plex-libray-sync", {
+    when: Date.now() + 100, // start immediately
+    periodInMinutes: durationHrs * 60,
+  });
+};
+
+const stopLibrarySync = () => {
+  chrome.alarms.clear("plex-libray-sync");
+};
+
+const startLibrarySync = restartLibrarySync;
+
 const onLoad = () => {
   const plexBtn = document.querySelector("sync-buttons-button.Plex");
   const simklBtn = document.querySelector("sync-buttons-button.Simkl");
   const syncBtn = document.querySelector("sync-form-button");
+  const urlInput = document.querySelector("sync-form-plex-url>input");
+  const durationInput = document.querySelector("sync-form-select-time>select");
 
   plexBtn.addEventListener("click", (_) => {
     chrome.storage.sync.get({ plexOauthToken: null }, ({ plexOauthToken }) => {
@@ -84,8 +112,36 @@ const onLoad = () => {
       }
     );
   });
-  syncBtn.addEventListener("click", (_) => {
-    //
+  urlInput.addEventListener(
+    "input",
+    debounce(() => {
+      if (urlInput.value.trim() != "") {
+        if (
+          urlInput.value.startsWith("http://") ||
+          urlInput.value.startsWith("https://")
+        ) {
+          document.body.classList.remove("error-url");
+          document.body.classList.add("url-added");
+        } else {
+          document.body.classList.add("error-url");
+        }
+      }
+    })
+  );
+  durationInput.addEventListener("change", (_) => {
+    chrome.storage.sync.set({ syncPeriod: durationInput.value });
+  });
+  syncBtn.addEventListener("click", async (_) => {
+    if (
+      document.body.classList.contains("connected-plex") &&
+      document.body.classList.contains("connected-simkl") &&
+      document.body.classList.contains("url-added")
+    ) {
+      await chrome.storage.local.set({ plexInstanceUrl: urlInput.value });
+      chrome.storage.sync.get({ syncPeriod: null }, ({ syncPeriod }) => {
+        startLibrarySync(syncPeriod);
+      });
+    }
   });
 
   if (window.location.hash == "#plex-oauth") {

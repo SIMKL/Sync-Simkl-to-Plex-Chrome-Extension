@@ -1,11 +1,3 @@
-// Extension on install register
-
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.tabs.create({
-    url: chrome.runtime.getURL("popup.html#fresh-install"),
-  });
-});
-
 // Global state
 
 // api methods to use globally
@@ -433,6 +425,14 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 
 // TODO: Periodic background sync
 
+chrome.alarms.onAlarm.addListener((alarm) => {
+  // works even when the service work is inactive
+  if (alarm.name == "plex-libray-sync") {
+    // TODO: plex libray sync
+    console.debug(alarm);
+  }
+});
+
 // Registering callbacks (calls)
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -523,3 +523,22 @@ chrome.webNavigation.onErrorOccurred.addListener(handleOauthIntercepts(), {
 chrome.webNavigation.onBeforeNavigate.addListener(handleOauthIntercepts(), {
   url: [{ urlPrefix: HttpCrxRedirectStub }],
 });
+
+// Extension on install register
+{
+  chrome.runtime.onInstalled.addListener((details) => {
+    let { reason } = details;
+    // if (reason === chrome.runtime.OnInstalledReason.INSTALL) {
+    // }
+    // reason can be install or update
+    chrome.tabs.create({
+      url: chrome.runtime.getURL(`popup.html#${reason}ed`),
+    });
+  });
+
+  // TODO: change this to the feedback url once done
+  const UNINSTALL_URL =
+    "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
+
+  chrome.runtime.setUninstallURL(UNINSTALL_URL);
+}
