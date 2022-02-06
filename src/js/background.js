@@ -389,7 +389,6 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     const { simklPinCode } = localdat;
 
     if (!!simklPinCode) {
-      chrome.storage.local.set({ simklPinCode: null });
       let response = await simklGetAuthToken(simklPinCode);
       console.debug("Simkl access_token response:", response);
       if ("error" in response) {
@@ -402,6 +401,8 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       if (response["access_token"] != null) {
         // got the plex authtoken
         // successfully logged in
+        // code is one time use only forget it
+        chrome.storage.local.set({ simklPinCode: null });
         responseChannel(
           makeSuccessResponse({ authToken: response["access_token"] })
         );
