@@ -160,7 +160,25 @@ sync,sync * {
 	sync-form {
 		padding-top: 16px;
 		width: var(--form-width);
+		opacity: 1;
+		/* height must be set to allow show/hide animation */
+		height: 265px;
+		transition: height 1s 0ms, opacity 1s 0ms;
 	}
+	/* https://stackoverflow.com/a/50546888 */
+	body:not(.connected-simkl) sync-form{
+		opacity: 0;
+		height: 0;
+		overflow: hidden;
+	    transition: height 1s 0ms, opacity 1s 0ms;
+	}
+	body:not(.connected-plex) sync-form{
+		opacity: 0;
+		height: 0;
+		overflow: hidden;
+	    transition: height 1s 0ms, opacity 1s 0ms;
+	}
+
 	sync-form-plex-url::before {
 		content: var(--text-form-plex-url);
 		padding-bottom: 5px;

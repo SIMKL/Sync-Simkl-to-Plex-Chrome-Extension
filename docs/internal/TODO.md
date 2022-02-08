@@ -5,9 +5,9 @@
 - [ ] API methods
   - [ ] Oauth
     - [x] Plex get authtoken
-    - [ ] Simkl get authtoken
-    - [ ] Control flow
-      - [ ] Connect APIs to Plex, Simkl buttons
+    - [x] Simkl get authtoken
+    - [x] Control flow
+      - [x] Connect APIs to Plex, Simkl buttons
       - [ ] Show errors/info messages in UI
       - [x] Reopening popup should resume state, use `localStorage` for persistance.
         - This is not an issue when in full tab
@@ -19,12 +19,12 @@
     - [ ] List out local libraries and their entries
     - [ ] Update a library info and entry info and status
     - [ ] Decide on how content is matched in simkl and plex
-- [ ] Ask user to setup syncing options
-  - [ ] Every `x` hrs
+- [x] Ask user to setup syncing options
+  - [x] Every `x` hrs
 - [x] Open popup in a full tab for the first time
   - [x] `chrome.runtime.onInstalled`
   - [x] concluded to be not needed ~~Add thanks for install message conditionally if in full tab.~~
-- [ ] Redirect to uninstalled feedback page once uninstalled.
+- [x] Redirect to uninstalled feedback page once uninstalled.
 - [ ] All the other minor todos and fixmes scattered across the code.
 
 #### `@andrewmasyk`

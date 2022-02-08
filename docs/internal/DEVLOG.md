@@ -18,7 +18,7 @@ This document describes the development workflow that went into this project.
   - Created a placeholder html UI to test plex oauth.
   - Works with polling but if extension popup is closed it will cancel all http requests thus when re-opening need to start the oauth process again.
   - Used background service worker for handling oauth requests. Thus popup closing won't effect the oauth flow.
-- `@andrewmasyk`
+- `@masyk`
   - Started working on the extension UI design on Adobe xd.
   - Finished working on design
 
@@ -70,12 +70,13 @@ This document describes the development workflow that went into this project.
     - Got the html UI from Andrew and connected the plex oaut flow to the `connect plex` button, via the css classlist toggle logic as suggested by Andrew.
     - Sent PR [#1](https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension/pull/1)
 
-- `@andrewmasyk`
+- `@masyk`
   - Started working on the html/css for chrome extension.
   - Finished working with the html/css
   - Chrome extension disallows the popup dimensions to exceed `800px x 600px` and the final height was `662px`
   - Made the changes required to get it to `599px`
     - FIXME: But it still shows a scroll bar - @phanirithvij
+      - @masyk said it's fine if it scrolls because the bottom text which is obscured is not worth re-adjusting the ui for.
 
 ---
 
@@ -97,7 +98,7 @@ This document describes the development workflow that went into this project.
 
 #### `6/2/2022`
 
-- `@phanirithvij` (4:15 hrs)
+- `@phanirithvij` (4:15 hrs total)
   - [x] Simkl Oauth methods
   - [x] Connect to UI
   - [x] Implement oauth flow for simkl
@@ -113,6 +114,33 @@ This document describes the development workflow that went into this project.
     - Or use a common time server for everything to solve the age old problem of not trusting client's clock time for anything important.
     - This is to avoid errors and corrupting any resources (user's plex library in this case)
   - Started working on these simkl activity api calls
+
+#### `8/2/2022`
+
+- `@phanirithvij` (4:44 hrs total)
+  - [x] gitignore client secrets for now (env.js)
+    - Format as of now
+      ```js
+      const SimklClientID = "xxx";
+      const SimklClientSecret = "xxx";
+      ```
+    - [ ] auto generate above script at build time
+      - using github actions and repo secrets
+  - [ ] Api calls
+    - [ ] finalize plex api calls
+      - [ ] Plex network sniff
+      - Cors blocked for local plex instances
+        - To unblock cors
+          - https://stackoverflow.com/a/67646077
+        - `declarativeNetRequest` can't be an optional_permission
+        - it is required to allow cors
+      - Useful resources:
+        - [gist](https://gist.github.com/philipjewell/2b721ccde6f251f67454dd04829cef4b) gets user's plex clients (outdated)
+          - new way is `&X-Plex-Token` and `https://plex.tv/devices.xml`
+    - [ ] finalize simkl api calls
+  - Added show/hide animations for sync-form element depending on whether both services are logged in.
+  - Discussed about how to handle settings changes.
+    - @masyk suggested, if url input changes stop sync automatically
 
 #### Notes (`@phanirithvij`)
 

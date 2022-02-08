@@ -1,3 +1,4 @@
 .env
 temp/
 node_modules/
+src/js/background/env.js

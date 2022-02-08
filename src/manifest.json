@@ -1,17 +1,23 @@
 {
     "manifest_version": 3,
-    "name": "Simkl2PlexDev",
+    "name": "Simkl>Plex(Dev)",
     "description": "Sync Simkl watch history to your plex account: development version",
     "version": "0.0.1",
     "background": {
-        "service_worker": "/js/background.js"
+        "service_worker": "/js/background/background.js"
     },
     "action": {
-        "default_popup": "popup.html"
+        "default_title": "Simkl>Plex"
     },
-    "permissions": [
-        "alarms",
-        "storage",
+    "host_permissions": [
+        "*://*/*"
+    ],
+    "optional_permissions": [
         "webNavigation"
+    ],
+    "permissions": [
+        "declarativeNetRequest",
+        "alarms",
+        "storage"
     ]
 }
