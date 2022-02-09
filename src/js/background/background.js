@@ -1,3 +1,14 @@
+self.addEventListener('install', () => {
+  // https://stackoverflow.com/a/38980776
+  // Skip over the "waiting" lifecycle state, to ensure that our
+  // new service worker is activated immediately, even if there's
+  // another tab open controlled by our older service worker code.
+  self.skipWaiting();
+});
+
+// https://www.npmjs.com/package/txml/v/5.1.1
+importScripts("../vendor/txml@5.1.1.min.js")
+
 // Global state
 
 // api methods to use globally

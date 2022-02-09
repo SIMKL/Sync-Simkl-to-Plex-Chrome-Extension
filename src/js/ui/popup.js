@@ -1,50 +1,11 @@
-const setCssVar = (property, value) => {
-  return document.documentElement.style.setProperty(property, value);
-};
-
-const getCssVar = (property) => {
-  return document.documentElement.style.getPropertyValue(property);
-};
-
-const removeWindowHash = () => {
-  // https://stackoverflow.com/a/5298684
-  window.history.replaceState(
-    "",
-    document.title,
-    window.location.pathname + window.location.search
-  );
-};
-
-const debounce = (func, timeout = 400) => {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      func.apply(this, args);
-    }, timeout);
-  };
-};
-
-// string prototype to make it convinient
-String.prototype.originUrl = function () {
-  return new URL(this).origin + "/";
-};
-
-const removeItemOnce = (arr, value) => {
-  var index = arr.indexOf(value);
-  if (index > -1) {
-    arr.splice(index, 1);
-  }
-  return arr;
-};
-
 const DefaultSyncPeriod = 12;
 
-const restartLibrarySync = (durationHrs = DefaultSyncPeriod) => {
+const restartLibrarySync = async (durationHrs = DefaultSyncPeriod) => {
   if (!durationHrs) {
     durationHrs = DefaultSyncPeriod;
   }
-  stopLibrarySync();
+  if (await isSyncRunning()) stopLibrarySync();
+  console.debug("Starting library sync, duration", durationHrs, "hrs");
   chrome.alarms.create("plex-libray-sync", {
     when: Date.now() + 100, // start immediately
     periodInMinutes: 0.1,
@@ -53,12 +14,13 @@ const restartLibrarySync = (durationHrs = DefaultSyncPeriod) => {
 };
 
 const stopLibrarySync = () => {
+  console.debug("Stopping any running library sync");
   chrome.alarms.clear("plex-libray-sync");
 };
 
 const startLibrarySync = restartLibrarySync;
 
-const isSyncEnabled = async () => {
+const isSyncRunning = async () => {
   return !!(await chrome.alarms.get("plex-libray-sync"));
 };
 
@@ -78,7 +40,7 @@ const validateInputUrl = (inputUrl) => {
   }
 };
 
-const handleOauthRedirectStep = () => {
+const handleLogins = () => {
   if (window.location.hash == "#plex-oauth") {
     // this won't request new pin, code this time
     startPlexOauth();
@@ -105,9 +67,6 @@ const removePlexURIPermissions = async (plexUrl) => {
   await chrome.storage.local.set({
     allowedOrigins: removeItemOnce(allowedOrigins, plexUrl.originUrl()),
   });
-  try {
-    await chrome.permissions.remove({ origins: [plexUrl.originUrl()] });
-  } catch (_) {}
 };
 
 const requestPlexURIPermissions = async (plexUrl) => {
@@ -178,11 +137,46 @@ const requestRedirectInterceptPermissions = async () => {
 const uiSyncStarted = () => {
   document.body.classList.add("sync-enabled");
 };
+
 const uiSyncStopped = () => {
   document.body.classList.remove("sync-enabled");
 };
 
+const uiSetLandscapeUrl = async (url) => {
+  if (!!url) {
+    // todo
+  }
+  setCssVar(
+    "--background-image-url",
+    "url('http://127.0.0.1:32400/photo/:/transcode?width=1920&height=1080&minSize=1&opacity=70&background=343a3f&url=%2Flibrary%2Fmetadata%2F910%2Fart%2F1643865295%3FX-Plex-Token%3DEkM9YQKSSua_MyxuDHK4&X-Plex-Token=EkM9YQKSSua_MyxuDHK4')"
+  );
+};
+
+const uiSetPortraitUrl = async (url) => {
+  if (!!url) {
+    // TODO: read from local storage or something
+  }
+  setCssVar(
+    "--background-image-url",
+    "url('http://127.0.0.1:32400/photo/:/transcode?width=800&height=600&minSize=1&upscale=1&opacity=30&url=%2Flibrary%2Fmetadata%2F932%2Fthumb%2F1643865288%3FX-Plex-Token%3DEkM9YQKSSua_MyxuDHK4&X-Plex-Token=EkM9YQKSSua_MyxuDHK4')"
+  );
+};
+
+const uiHandleBackgroundImg = () => {
+  let aspectRatio = document.body.clientWidth / document.body.clientHeight;
+  Math.round(aspectRatio - 0.5) >= 1 ? uiSetLandscapeUrl() : uiSetPortraitUrl();
+};
+
+const uiSetPopupViewState = () => {
+  let win = chrome.extension.getViews({ type: "popup" })[0];
+  if (win !== undefined && win == window) {
+    document.documentElement.classList.add("popupview");
+  }
+};
+
 const onLoad = async () => {
+  // TODO: service worker bug fix
+
   const plexBtn = document.querySelector("sync-buttons-button.Plex");
   const simklBtn = document.querySelector("sync-buttons-button.Simkl");
   const syncBtn = document.querySelector("sync-form-button");
@@ -190,12 +184,12 @@ const onLoad = async () => {
   const durationInput = document.querySelector("sync-form-select-time>select");
 
   plexBtn.addEventListener("click", async (_) => {
-    await requestRedirectInterceptPermissions();
     let { plexOauthToken } = await chrome.storage.sync.get({
       plexOauthToken: null,
     });
     console.debug(`plexOauthToken is: ${plexOauthToken}`);
     if (!plexOauthToken) {
+      await requestRedirectInterceptPermissions();
       startPlexOauth();
     } else {
       logoutPlex();
@@ -231,7 +225,7 @@ const onLoad = async () => {
         plexInstanceUrl: urlInput.value,
         syncPeriod: durationInput.value,
       });
-      if (await isSyncEnabled()) {
+      if (await isSyncRunning()) {
         // sync enabled; stop it
         uiSyncStopped();
         stopLibrarySync();
@@ -249,7 +243,7 @@ const onLoad = async () => {
     }
   });
 
-  handleOauthRedirectStep();
+  handleLogins();
   // load settings from local storage and update UI
   (async () => {
     let { plexInstanceUrl, syncPeriod } = await chrome.storage.local.get({
@@ -263,13 +257,17 @@ const onLoad = async () => {
     if (!!syncPeriod) {
       durationInput.value = syncPeriod;
     }
-    if (await isSyncEnabled()) {
+    if (await isSyncRunning()) {
       uiSyncStarted();
     }
   })();
+
+  uiSetPopupViewState();
+  uiHandleBackgroundImg();
 };
 
 window.addEventListener("load", onLoad);
+window.addEventListener("resize", uiHandleBackgroundImg);
 
 // Registering UI event handlers (actions)
 
@@ -283,11 +281,13 @@ chrome.runtime.onMessage.addListener((message, sender) => {
           break;
         case "oauth.plex.logout":
           finishLogoutPlex(message);
+          stopLibrarySync();
           break;
         case "oauth.simkl.login":
           finishSimklOauth(message);
           break;
         case "oauth.simkl.logout":
+          stopLibrarySync();
           finishLogoutSimkl(message);
           break;
         default:

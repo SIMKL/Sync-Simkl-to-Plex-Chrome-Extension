@@ -12,10 +12,9 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   const PlexClientNameHumanReadable = "Simkl to Plex";
   const PlexClientVersion = chrome.runtime.getManifest().version + ".dev";
   // This can be anything random but needs to be unique forever
-  const PlexClientID = await sha512(`${PlexClientName} ${PlexClientVersion}`);
-  // Plex login timeout in millisecs
-  // const PlexLoginTimeout = 600 * 1000;
-  // const plexLoginTimeout = 1800 * 1000; // plex default login timeout
+  const PlexClientID =
+    "ab13e1dbe1919ac4d775912da8d3e7a61c3d58cc3395980c2a183e1d9627ee8a174a48f926e728e6645c1b17d8da9299ed00887a6f3c45ee2f2d9d9e4c6ed802";
+  // const PlexClientID = await sha512(`${PlexClientName} ${PlexClientVersion}`);
 
   const plexCheckTokenValiditiy = async (responseChannel, token) => {
     if (!token) {
@@ -201,9 +200,25 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     return true;
   };
 
-  const plexGetLibraryItems = async (plexToken) => {
+  const plexGetLocalServers = async ({ plexToken, plexApiBaseURL }) => {
     let resp = await fetch(
-      "http://127.0.0.1:32400/library/sections?" +
+      `${plexApiBaseURL}/servers?` +
+        stringify({
+          "X-Plex-Token": plexToken,
+        }),
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
+    console.debug(resp.status, await resp.json());
+  };
+
+  const plexGetLibrarySections = async ({ plexToken, plexApiBaseURL }) => {
+    let resp = await fetch(
+      `${plexApiBaseURL}/library/sections?` +
         stringify({
           "X-Plex-Product": PlexClientName,
           "X-Plex-Version": PlexClientVersion,
@@ -222,6 +237,40 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     console.debug(resp.status, await resp.json());
   };
 
+  const plexGetLibrarySectionAll = async ({
+    plexToken,
+    plexApiBaseURL,
+    librarySectionID,
+  }) => {
+    let resp = await fetch(
+      `${plexApiBaseURL}/library/sections/${librarySectionID}/all?` +
+        stringify({
+          type: 2,
+          includeCollections: 1,
+          includeExternalMedia: 1,
+          includeAdvanced: 1,
+          includeMeta: 1,
+          "X-Plex-Container-Start": 0,
+          "X-Plex-Container-Size": 50,
+          "X-Plex-Text-Format": "plain",
+          "X-Plex-Product": PlexClientName,
+          "X-Plex-Version": PlexClientVersion,
+          "X-Plex-Client-Identifier": PlexClientID,
+          "X-Plex-Token": plexToken,
+        }),
+      {
+        headers: {
+          accept: "application/json",
+        },
+      }
+    );
+    if (resp.status == 200) {
+      console.debug(resp.status, await resp.json());
+      return;
+    }
+    console.debug(resp.status);
+  };
+
   const plexGetUserDevices = async (plexToken) => {
     let resp = await fetch(
       "https://plex.tv/devices.xml?" +
@@ -237,10 +286,78 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     console.debug(resp.status, await resp.text());
   };
 
+  const plexHealthCheck = async () => {
+    return false;
+  };
+
+  const plexGetUserProfiles = async (plexToken) => {
+    let resp = await fetch(
+      "https://plex.tv/api/home/users?" +
+        stringify({
+          "X-Plex-Product": PlexClientName,
+          "X-Plex-Version": PlexClientVersion,
+          "X-Plex-Client-Identifier": PlexClientID,
+          "X-Plex-Token": plexToken,
+        }),
+      {
+        headers: {
+          accept: "application/xml",
+        },
+      }
+    );
+    if (resp.status == 200) {
+      let xml = await resp.text();
+      console.debug(txml.parse(xml));
+      return;
+    }
+    console.debug(resp.status);
+  };
+
+  const plexGetUserProfileInfo = async (plexToken) => {
+    let resp = await fetch(
+      "https://plex.tv/api/users?" +
+        stringify({
+          "X-Plex-Product": PlexClientName,
+          "X-Plex-Version": PlexClientVersion,
+          "X-Plex-Client-Identifier": PlexClientID,
+          "X-Plex-Token": plexToken,
+        }),
+      {
+        headers: {
+          accept: "application/json",
+        },
+        method: "GET",
+      }
+    );
+    if (resp.status == 200) {
+      let xml = await resp.text();
+      console.debug(txml.parse(xml));
+      return;
+    }
+    console.debug(resp.status);
+  };
+
+  const plexThumbURL = (thumbUrl) => {
+    return (
+      "https://plex.tv/photo?" +
+      stringify({
+        url: thumbUrl + "&size=100",
+        height: 120,
+        minSize: 1,
+        width: 120,
+      })
+    );
+  };
+
   __API__.plex.oauth["plexOauthStart"] = plexOauthStart;
   __API__.plex.oauth["plexCheckTokenValiditiy"] = plexCheckTokenValiditiy;
   __API__.plex.oauth["plexGetAuthToken"] = plexGetAuthToken;
 
+  __API__.plex.apis["plexGetLocalServers"] = plexGetLocalServers;
   __API__.plex.apis["plexGetUserDevices"] = plexGetUserDevices;
-  __API__.plex.apis["plexGetLibraryItems"] = plexGetLibraryItems;
+  __API__.plex.apis["plexGetLibrarySections"] = plexGetLibrarySections;
+  __API__.plex.apis["plexGetLibrarySectionAll"] = plexGetLibrarySectionAll;
+  __API__.plex.apis["plexHealthCheck"] = plexHealthCheck;
+  __API__.plex.apis["plexGetUserProfiles"] = plexGetUserProfiles;
+  __API__.plex.apis["plexGetUserProfileInfo"] = plexGetUserProfileInfo;
 })();

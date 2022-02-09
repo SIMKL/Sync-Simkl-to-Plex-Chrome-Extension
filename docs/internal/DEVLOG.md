@@ -142,6 +142,16 @@ This document describes the development workflow that went into this project.
   - Discussed about how to handle settings changes.
     - @masyk suggested, if url input changes stop sync automatically
 
+#### `9/2/2022`
+
+- `@phanirithvij` (TBA)
+  - Some plex endpoints don't return JSON even if `accept: application/json` is specified
+    - So xml needs to be parsed in the background script where `DOMParser` isn't available.
+    - I chose to use txml (tiny xml) parser
+  - plex.tv also auto closes the devtools when inspecting
+    - `"C:\Program Files (x86)\Google\Chrome Beta\Application\chrome.exe" "https://app.plex.tv/desktop/#!/" --remote-debugging-port=9222 --user-data-dir="C:\Users\Rithvij\AppData\Local\Temp"`
+    - Discovered the above command to kinda work in combination with `chrome://inspect`
+
 #### Notes (`@phanirithvij`)
 
 - Oauth endpoints need to be handled in background.js because popup might close and we might lose the state.
