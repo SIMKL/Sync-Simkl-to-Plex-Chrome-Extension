@@ -1,4 +1,6 @@
-self.addEventListener('install', () => {
+self.addEventListener("install", () => {
+  // service worker bug fix
+  // after using this I wasn't able to reproduce the bug anymore
   // https://stackoverflow.com/a/38980776
   // Skip over the "waiting" lifecycle state, to ensure that our
   // new service worker is activated immediately, even if there's
@@ -7,20 +9,55 @@ self.addEventListener('install', () => {
 });
 
 // https://www.npmjs.com/package/txml/v/5.1.1
-importScripts("../vendor/txml@5.1.1.min.js")
+importScripts("../vendor/txml@5.1.1.min.js");
 
 // Global state
 
-// api methods to use globally
+// Api methods to use globally
 
+// TODO: remove these after migrating to type script
+// or after done developing with this part
+// these solely exist for IDE auto completions
+const n_1 = (_) => {}
+const n_2 = (_, __) => {}
+const _1 = async (_) => {}
+const _2 = async (_, __) => {}
+
+// this structure is required
+// but _1, _2, n_1, n_2, etc. can be replaced with null.
 let __API__ = {
   plex: {
-    oauth: {},
-    apis: {},
+    oauth: {
+      oauthStart: _2,
+      checkTokenValiditiy: _2,
+      getAuthToken: _2,
+    },
+    apis: {
+      getLocalServers: _1,
+      getUserDevices: _1,
+      getLibrarySections: _1,
+      getLibrarySectionAll: _1,
+      healthCheck: _1,
+      getUserProfiles: _1,
+      getUserProfileInfo: _1,
+      markEpisodeWatched: _2,
+      markSeasonWatched: _2,
+      markShowWatched: _2,
+      markMovieWatched: _2,
+      lookupItemByGuid: _1,
+      plexThumbURL: n_1,
+    },
   },
   simkl: {
-    oauth: {},
-    apis: {},
+    oauth: {
+      oauthStart: _2,
+      checkTokenValiditiy: _2,
+    },
+    apis: {
+      getLastActivity: _2,
+      getAllItems: _2,
+      getUserInfo: _1,
+    },
   },
 };
 
@@ -36,65 +73,42 @@ importScripts("./api/plex.js");
 // Simkl: API handling
 importScripts("./api/simkl.js");
 
-// TODO: Periodic background sync
-
-chrome.alarms.onAlarm.addListener((alarm) => {
-  // works even when the service work is inactive
-  if (alarm.name == "plex-libray-sync") {
-    // TODO: plex libray sync
-    console.debug(alarm);
-  }
-});
-
 // Registering callbacks (calls)
+// for any connected clients to use
+importScripts("../common.js");
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.debug("[SW] Got message:", message, "from:", sender);
   switch (message.type) {
-    case "call":
+    case CallType.call:
       switch (message.method) {
-        case "oauth.plex.plexOauthStart":
-          __API__.plex.oauth["plexOauthStart"](sendResponse, message.inPopup);
+        // Oauth
+        case CallType.oauth.plex.oauthStart:
+          __API__.plex.oauth.oauthStart(sendResponse, message.inPopup);
           // https://stackoverflow.com/a/57608759
           return true;
-        case "oauth.plex.plexCheckTokenValiditiy":
-          __API__.plex.oauth["plexCheckTokenValiditiy"](
-            sendResponse,
-            message.token
-          );
+        case CallType.oauth.plex.checkTokenValiditiy:
+          __API__.plex.oauth.checkTokenValiditiy(sendResponse, message.token);
           return true;
-        case "oauth.simkl.simklOauthStart":
-          __API__.simkl.oauth["simklOauthStart"](sendResponse, message.inPopup);
+        case CallType.oauth.simkl.oauthStart:
+          __API__.simkl.oauth.oauthStart(sendResponse, message.inPopup);
           // https://stackoverflow.com/a/57608759
           return true;
-        case "oauth.simkl.simklCheckTokenValiditiy":
-          __API__.simkl.oauth["simklCheckTokenValiditiy"](
-            sendResponse,
-            message.token
-          );
+        case CallType.oauth.simkl.checkTokenValiditiy:
+          __API__.simkl.oauth.checkTokenValiditiy(sendResponse, message.token);
           return true;
-        case "apis.simkl.simklGetLastActivity":
-          __API__.simkl.apis["simklGetLastActivity"](
-            sendResponse,
-            message.token
-          );
-          return true;
-        case "apis.simkl.simklGetAllItems":
-          __API__.simkl.apis["simklGetAllItems"](
-            sendResponse,
-            message.dateFrom,
-            message.token
-          );
-          return true;
-        case "bg.addInterceptListeners":
+
+          // bg handlers
+        case CallType.bg.addInterceptListeners:
           addInterceptListeners();
           return true;
+
         default:
-          console.debug("Unknown message call", message);
+          console.debug("Unknown message method", message);
           break;
       }
       break;
-    case "action":
+    case ActionType.action:
       // ignore actions they will be handled by
       // all instances of popup.js
       break;
@@ -103,6 +117,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
   }
   return true;
+});
+
+// Periodic background sync
+
+importScripts("./sync.js");
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  // works even when the service work is inactive
+  if (alarm.name == "plex-libray-sync") {
+    // TODO: plex libray sync
+    await startBgSync();
+  }
 });
 
 // Intercept and redirect to chrome-extension://
@@ -147,8 +173,9 @@ const addInterceptListeners = () => {
 // Extension on install register
 {
   chrome.runtime.onInstalled.addListener(({ reason }) => {
-    // TODO: check if updating extension stops existing alarms
+    // check if updating extension stops existing alarms
     // and do they need to be restarted?
+    // found out, they still run
 
     // reason can be one of chrome.runtime.OnInstalledReason
     // can show different ui based on this

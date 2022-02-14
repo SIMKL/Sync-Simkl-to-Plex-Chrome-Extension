@@ -13,8 +13,8 @@ const saveSimklAuthToken = (authToken, callback) => {
 
 const logoutSimkl = () => {
   let message = {
-    action: "oauth.simkl.logout",
-    type: "action",
+    action: ActionType.oauth.simkl.logout,
+    type: ActionType.action,
   };
   // broadcast logout event to all clients
   chrome.runtime.sendMessage(message);
@@ -31,16 +31,14 @@ const startSimklOauth = () => {
   console.debug("Starting simkl authentication flow");
   chrome.runtime.sendMessage(
     {
-      type: "call",
-      method: "oauth.simkl.simklOauthStart",
-      inPopup:
-        // https://stackoverflow.com/a/8921196
-        chrome.extension.getViews({ type: "popup" })[0] !== undefined,
+      type: CallType.call,
+      method: CallType.oauth.simkl.oauthStart,
+      inPopup: inPopup(),
     },
     (response) => {
       let message = {
-        action: "oauth.simkl.login",
-        type: "action",
+        action: ActionType.oauth.simkl.login,
+        type: ActionType.action,
         ...response,
       };
       // send broadcast message to others
@@ -70,7 +68,10 @@ const checkSimklAuthTokenValidity = () => {
 
   // Note: broadcasting to other connected views is not needed for this
   chrome.runtime.sendMessage(
-    { type: "call", method: "oauth.simkl.simklCheckTokenValiditiy" },
+    {
+      type: CallType.call,
+      method: CallType.oauth.simkl.checkTokenValiditiy,
+    },
     (response) => {
       const { authToken, valid } = response;
       if (valid) {
@@ -89,7 +90,7 @@ const checkSimklAuthTokenValidity = () => {
 
 const fetchSimklFullHistory = () => {
   chrome.runtime.sendMessage(
-    { type: "call", method: "apis.simkl.simklGetAllItems" },
+    { type: CallType.call, method: CallType.apis.simkl.getAllItems },
     (response) => {
       console.debug(response);
     }

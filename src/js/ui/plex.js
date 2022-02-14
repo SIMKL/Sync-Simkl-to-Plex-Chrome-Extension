@@ -12,8 +12,8 @@ const savePlexAuthToken = (authToken, callback) => {
 
 const logoutPlex = () => {
   let message = {
-    action: "oauth.plex.logout",
-    type: "action",
+    action: ActionType.oauth.plex.logout,
+    type: ActionType.action,
   };
   // broadcast logout event to all clients
   chrome.runtime.sendMessage(message);
@@ -30,16 +30,16 @@ const startPlexOauth = () => {
   console.debug("Starting plex authentication flow");
   chrome.runtime.sendMessage(
     {
-      type: "call",
-      method: "oauth.plex.plexOauthStart",
+      type: CallType.call,
+      method: CallType.oauth.plex.oauthStart,
       inPopup:
         // https://stackoverflow.com/a/8921196
         chrome.extension.getViews({ type: "popup" })[0] !== undefined,
     },
     (response) => {
       let message = {
-        action: "oauth.plex.login",
-        type: "action",
+        action: ActionType.oauth.plex.login,
+        type: ActionType.action,
         ...response,
       };
       // send broadcast message to others
@@ -71,7 +71,10 @@ const checkPlexAuthTokenValidity = () => {
 
   // Note: broadcasting to other connected views is not needed for this
   chrome.runtime.sendMessage(
-    { type: "call", method: "oauth.plex.plexCheckTokenValiditiy" },
+    {
+      type: CallType.call,
+      method: CallType.oauth.plex.checkTokenValiditiy,
+    },
     (response) => {
       const { authToken, valid } = response;
       if (valid) {

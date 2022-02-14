@@ -66,7 +66,7 @@ This document describes the development workflow that went into this project.
       - Redirect flow works now. But there is a catch because of how plex oauth flow works.
         - Plex doesn't return `?code=<>` so we need to request a specific endpoint to get the `authToken` after entering the extension again.
         - For this the logic coded was save `pincode,pinid` to localstorage after the intial request and before the redirect if the url hash is `plex-oauth` then load `pincode,pinid` from localstorage and get the `authToken` and remove them from localstorage and remove the url hash, i.e., `popup.html`
-        - TODO: Also need to add expire time to localstorage to invalidate expired `pincode,pinid` from localstorage.
+        - TODO: Also may need to add expire time to localstorage to invalidate expired `pincode,pinid` from localstorage.
     - Got the html UI from Andrew and connected the plex oaut flow to the `connect plex` button, via the css classlist toggle logic as suggested by Andrew.
     - Sent PR [#1](https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension/pull/1)
 

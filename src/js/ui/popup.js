@@ -1,5 +1,3 @@
-const DefaultSyncPeriod = 12;
-
 const restartLibrarySync = async (durationHrs = DefaultSyncPeriod) => {
   if (!durationHrs) {
     durationHrs = DefaultSyncPeriod;
@@ -8,7 +6,7 @@ const restartLibrarySync = async (durationHrs = DefaultSyncPeriod) => {
   console.debug("Starting library sync, duration", durationHrs, "hrs");
   chrome.alarms.create("plex-libray-sync", {
     when: Date.now() + 100, // start immediately
-    periodInMinutes: 0.1,
+    periodInMinutes: 0.3,
     // periodInMinutes: durationHrs * 60,
   });
 };
@@ -25,13 +23,24 @@ const isSyncRunning = async () => {
 };
 
 const validateInputUrl = (inputUrl) => {
-  if (inputUrl.trim() != "") {
+  // will always add a / at the end
+  let url = inputUrl;
+  try {
+    url = new URL(inputUrl).href;
+  } catch (error) {
+    document.body.classList.add("error-url");
+    return;
+  }
+  if (url.trim() != "") {
     if (
-      (inputUrl.startsWith("http://") || inputUrl.startsWith("https://")) &&
-      // must be http{s}://something[/]
-      // not http{s}://
-      inputUrl.split("://")[1].endsWith("/")
+      (url.startsWith("http://") || url.startsWith("https://")) &&
+      !!url.split("://")[1]
     ) {
+      // remove any and all errors
+      document.body.classList.remove("error-plex-url-unexpected");
+      document.body.classList.remove("error-simkl-url-unexpected");
+      document.body.classList.remove("sync-error-simkl");
+      document.body.classList.remove("sync-error-plex");
       document.body.classList.remove("error-url");
       document.body.classList.add("url-added");
     } else {
@@ -128,38 +137,54 @@ const requestRedirectInterceptPermissions = async () => {
     return;
   }
   let message = {
-    method: "bg.addInterceptListeners",
-    type: "call",
+    method: CallType.bg.addInterceptListeners,
+    type: CallType.call,
   };
   await chrome.runtime.sendMessage(message);
 };
 
-const uiSyncStarted = () => {
+const uiSyncEnabled = () => {
   document.body.classList.add("sync-enabled");
 };
 
-const uiSyncStopped = () => {
+const uiSyncDisabled = () => {
   document.body.classList.remove("sync-enabled");
 };
 
+const uiBroadcastSyncState = (enabled = true) => {
+  let message = {
+    action: enabled ? ActionType.ui.sync.enabled : ActionType.ui.sync.disabled,
+    type: ActionType.action,
+  };
+  chrome.runtime.sendMessage(message);
+};
+
 const uiSetLandscapeUrl = async (url) => {
-  if (!!url) {
-    // todo
+  if (!url) {
+    let { landScapeUrl } = await chrome.storage.local.get({
+      landScapeUrl: null,
+    });
+    url = landScapeUrl;
+    if (!url) {
+      return;
+    }
   }
-  setCssVar(
-    "--background-image-url",
-    "url('http://127.0.0.1:32400/photo/:/transcode?width=1920&height=1080&minSize=1&opacity=70&background=343a3f&url=%2Flibrary%2Fmetadata%2F910%2Fart%2F1643865295%3FX-Plex-Token%3DEkM9YQKSSua_MyxuDHK4&X-Plex-Token=EkM9YQKSSua_MyxuDHK4')"
-  );
+  setCssVar("--background-image-url", `url('${url}')`);
 };
 
 const uiSetPortraitUrl = async (url) => {
-  if (!!url) {
-    // TODO: read from local storage or something
+  // read from local storage
+  if (!url) {
+    let { portraitUrl } = await chrome.storage.local.get({
+      portraitUrl: null,
+    });
+    url = portraitUrl;
+    if (!url) {
+      return;
+    }
   }
-  setCssVar(
-    "--background-image-url",
-    "url('http://127.0.0.1:32400/photo/:/transcode?width=800&height=600&minSize=1&upscale=1&opacity=30&url=%2Flibrary%2Fmetadata%2F932%2Fthumb%2F1643865288%3FX-Plex-Token%3DEkM9YQKSSua_MyxuDHK4&X-Plex-Token=EkM9YQKSSua_MyxuDHK4')"
-  );
+
+  setCssVar("--background-image-url", `url('${url}')`);
 };
 
 const uiHandleBackgroundImg = () => {
@@ -168,15 +193,12 @@ const uiHandleBackgroundImg = () => {
 };
 
 const uiSetPopupViewState = () => {
-  let win = chrome.extension.getViews({ type: "popup" })[0];
-  if (win !== undefined && win == window) {
+  if (inPopup()) {
     document.documentElement.classList.add("popupview");
   }
 };
 
 const onLoad = async () => {
-  // TODO: service worker bug fix
-
   const plexBtn = document.querySelector("sync-buttons-button.Plex");
   const simklBtn = document.querySelector("sync-buttons-button.Simkl");
   const syncBtn = document.querySelector("sync-form-button");
@@ -216,28 +238,33 @@ const onLoad = async () => {
     if (
       document.body.classList.contains("connected-plex") &&
       document.body.classList.contains("connected-simkl") &&
-      document.body.classList.contains("url-added")
+      document.body.classList.contains("url-added") &&
+      !document.body.classList.contains("error-url")
     ) {
+      let normalizedUrl = new URL(urlInput.value).href;
       let { plexInstanceUrl: oldPlexUrl } = await chrome.storage.local.get({
         plexInstanceUrl: null,
       });
       await chrome.storage.local.set({
-        plexInstanceUrl: urlInput.value,
+        plexInstanceUrl: normalizedUrl,
         syncPeriod: durationInput.value,
       });
       if (await isSyncRunning()) {
         // sync enabled; stop it
-        uiSyncStopped();
+        uiSyncDisabled();
         stopLibrarySync();
-        if (oldPlexUrl.originUrl() != urlInput.value.originUrl()) {
+        uiBroadcastSyncState(false);
+        if (oldPlexUrl.originUrl() != normalizedUrl.originUrl()) {
           // remove permissions for old url
           removePlexURIPermissions(oldPlexUrl);
         }
       } else {
         // https://stackoverflow.com/questions/27669590/chrome-extension-function-must-be-called-during-a-user-gesture
         if (await requestPlexURIPermissions(urlInput.value)) {
-          uiSyncStarted();
+          uiSyncEnabled();
+          // TODO: remove the sync-errors
           startLibrarySync(durationInput.value);
+          uiBroadcastSyncState(true);
         }
       }
     }
@@ -258,11 +285,16 @@ const onLoad = async () => {
       durationInput.value = syncPeriod;
     }
     if (await isSyncRunning()) {
-      uiSyncStarted();
+      uiSyncEnabled();
     }
   })();
 
   uiSetPopupViewState();
+  window.plexToken = "557hnxdHxNRXjrcP5PsF";
+  await chrome.storage.local.set({
+    landScapeUrl: `http://127.0.0.1:32400/photo/:/transcode?width=1920&height=1080&minSize=1&opacity=70&background=343a3f&url=%2Flibrary%2Fmetadata%2F910%2Fart%2F1643865295%3FX-Plex-Token%3D${plexToken}&X-Plex-Token=${plexToken}`,
+    portraitUrl: `http://127.0.0.1:32400/photo/:/transcode?width=800&height=600&minSize=1&upscale=1&opacity=10&url=%2Flibrary%2Fmetadata%2F932%2Fthumb%2F1643865288%3FX-Plex-Token%3D${plexToken}&X-Plex-Token=${plexToken}`,
+  });
   uiHandleBackgroundImg();
 };
 
@@ -272,29 +304,89 @@ window.addEventListener("resize", uiHandleBackgroundImg);
 // Registering UI event handlers (actions)
 
 chrome.runtime.onMessage.addListener((message, sender) => {
-  console.debug("Got message:", message, "from:", sender);
+  // console.debug("Got message:", message, "from:", sender);
   switch (message.type) {
-    case "action":
+    case ActionType.action:
       switch (message.action) {
-        case "oauth.plex.login":
+        case ActionType.oauth.plex.login:
           finishPlexOauth(message);
           break;
-        case "oauth.plex.logout":
+        case ActionType.oauth.plex.logout:
           finishLogoutPlex(message);
+          uiSyncDisabled();
           stopLibrarySync();
           break;
-        case "oauth.simkl.login":
+        case ActionType.oauth.simkl.login:
           finishSimklOauth(message);
           break;
-        case "oauth.simkl.logout":
+        case ActionType.oauth.simkl.logout:
+          uiSyncDisabled();
           stopLibrarySync();
           finishLogoutSimkl(message);
           break;
+        case ActionType.ui.sync.enabled:
+          uiSyncEnabled();
+          break;
+        case ActionType.ui.sync.disabled:
+          uiSyncDisabled();
+          break;
+        case ActionType.ui.sync.plex.online:
+          document.body.classList.remove("error-plex-url-offline");
+          break;
+        case ActionType.ui.sync.plex.offline:
+          document.body.classList.add("error-plex-url-offline");
+          break;
+        case ActionType.ui.sync.simkl.online:
+          document.body.classList.remove("error-simkl-url-offline");
+          break;
+        case ActionType.ui.sync.simkl.offline:
+          document.body.classList.add("error-simkl-url-offline");
+          break;
+        case ActionType.ui.sync.plex.connecting:
+          document.body.classList.add("sync-connecting-to-plex");
+          break;
+        case ActionType.ui.sync.plex.connectdone:
+          document.body.classList.remove("sync-connecting-to-plex");
+          break;
+        case ActionType.ui.sync.plex.unexpected:
+          document.body.classList.add("error-plex-url-unexpected");
+          setTimeout(() => {
+            // TODO: can this be avoided?
+            // auto dismiss in 10 secs
+            // the other way to dismiss is to modify the url
+            document.body.classList.remove("error-plex-url-unexpected");
+          }, 10000);
+          break;
+        case ActionType.ui.sync.plex.sessionexpired:
+          document.body.classList.add("sync-error-plex");
+          uiSyncDisabled();
+          stopLibrarySync();
+          break;
+        case ActionType.ui.sync.simkl.connecting:
+          document.body.classList.add("sync-connecting-to-simkl");
+          break;
+        case ActionType.ui.sync.simkl.connectdone:
+          document.body.classList.remove("sync-connecting-to-simkl");
+          break;
+        case ActionType.ui.sync.simkl.unexpected:
+          document.body.classList.add("error-simkl-url-unexpected");
+          setTimeout(() => {
+            // TODO: can this be avoided?
+            // auto dismiss in 10 secs
+            // the other way to dismiss is to modify the url
+            document.body.classList.remove("error-simkl-url-unexpected");
+          }, 10000);
+          break;
+        case ActionType.ui.sync.simkl.sessionexpired:
+          document.body.classList.add("sync-error-simkl");
+          uiSyncDisabled();
+          stopLibrarySync();
+          break;
         default:
-          console.debug("Unknown message format", message);
+          console.debug("Unknown action", message);
       }
       break;
-    case "call":
+    case CallType.call:
       // ignore calls (they will be recieved by background.js)
       break;
 

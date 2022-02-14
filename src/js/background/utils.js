@@ -1,29 +1,9 @@
 const stringify = (json) => {
   return Object.keys(json)
-    .map(function (key) {
+    .map((key) => {
       return encodeURIComponent(key) + "=" + encodeURIComponent(json[key]);
     })
     .join("&");
-};
-
-const chromeSyncGetAsync = async (key) => {
-  // https://stackoverflow.com/a/58491883
-  var p = new Promise(function (resolve, reject) {
-    chrome.storage.sync.get(key, function (data) {
-      resolve(data);
-    });
-  });
-  return await p;
-};
-
-const chromeLocalGetAsync = async (key) => {
-  // https://stackoverflow.com/a/58491883
-  var p = new Promise(function (resolve, reject) {
-    chrome.storage.local.get(key, function (data) {
-      resolve(data);
-    });
-  });
-  return await p;
 };
 
 const makeErrorResponse = (data) => {
@@ -49,3 +29,5 @@ const sha512 = async (str) => {
     .call(new Uint8Array(buf), (x) => ("00" + x.toString(16)).slice(-2))
     .join("");
 };
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -39,3 +39,10 @@ const removeItemOnce = (arr, value) => {
   }
   return arr;
 };
+
+const inPopup = () => {
+  // know if the current view is a popup or a full tab
+  // https://stackoverflow.com/a/8921196
+  let win = chrome.extension.getViews({ type: "popup" })[0];
+  return win !== undefined && win == window;
+};
