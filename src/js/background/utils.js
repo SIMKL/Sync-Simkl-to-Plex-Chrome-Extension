@@ -31,3 +31,27 @@ const sha512 = async (str) => {
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+let OSName, OSLanguage, BrowserVersion, BrowserName;
+
+const loadBrowserInfo = async () => {
+  let {
+    browserInfo: {
+      browserVersion: bVersion,
+      browserName: bName,
+      osName: name,
+      osLanguage: lang,
+    },
+  } = await chrome.storage.local.get({
+    browserInfo: {
+      browserVersion: null,
+      browserName: "Chrome",
+      osName: null,
+      osLanguage: "en",
+    },
+  });
+  OSLanguage = lang;
+  OSName = name;
+  BrowserVersion = bVersion;
+  BrowserName = bName;
+};

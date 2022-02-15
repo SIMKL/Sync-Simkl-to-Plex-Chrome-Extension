@@ -9,6 +9,8 @@
 const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
 
 (async () => {
+  await loadBrowserInfo();
+
   // Extension client Config for plex oauth
   // This is shown to user according to plex docs
   const PlexClientName = "Simkl>Plex(Dev)";
@@ -35,6 +37,20 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     throw err;
   };
 
+  const stringifyPlex = (data) => {
+    return stringify({
+      ...data,
+      "X-Plex-Device-Name": PlexClientNameHumanReadable,
+      "X-Plex-Product": PlexClientName,
+      "X-Plex-Client-Identifier": PlexClientID,
+      "X-Plex-Version": PlexClientVersion,
+      "X-Plex-Platform": BrowserName,
+      "X-Plex-Platform-Version": BrowserVersion,
+      "X-Plex-Device": OSName,
+      "X-Plex-Language": OSLanguage,
+    });
+  };
+
   const checkTokenValiditiy = async (responseChannel, token) => {
     if (!token) {
       let { plexOauthToken } = await chrome.storage.sync.get({
@@ -50,10 +66,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       let resp = await fetch(
         "https://plex.tv/api/v2/user?" +
-          stringify({
-            "X-Plex-Device-Name": PlexClientNameHumanReadable,
-            "X-Plex-Product": PlexClientName,
-            "X-Plex-Client-Identifier": PlexClientID,
+          stringifyPlex({
             "X-Plex-Token": token,
           }),
         {
@@ -113,8 +126,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   };
 
   const getAuthToken = async (pinID, pincode) => {
-    let qry = stringify({
-      "X-Plex-Client-Identifier": PlexClientID,
+    let qry = stringifyPlex({
       code: pincode,
     });
     try {
@@ -140,12 +152,8 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       const resp = await fetch(
         "https://plex.tv/api/v2/pins?" +
-          stringify({
+          stringifyPlex({
             strong: "true",
-            "X-Plex-Product": PlexClientName,
-            "X-Plex-Device-Name": PlexClientNameHumanReadable,
-            "X-Plex-Client-Identifier": PlexClientID,
-            "X-Plex-Version": PlexClientVersion,
           }),
         {
           method: "POST",
@@ -289,12 +297,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       let resp = await fetch(
         `${plexApiBaseURL}library/sections?` +
-          stringify({
-            "X-Plex-Product": PlexClientName,
-            "X-Plex-Version": PlexClientVersion,
-            "X-Plex-Client-Identifier": PlexClientID,
-            "X-Plex-Features": "external-media,indirect-media",
-            "X-Plex-Device-Name": PlexClientNameHumanReadable,
+          stringifyPlex({
             "X-Plex-Token": plexToken,
           }),
         {
@@ -338,7 +341,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       let resp = await fetch(
         `${plexApiBaseURL}library/sections/${libraryKey}/all?` +
-          stringify({
+          stringifyPlex({
             // movies   -> 1
             // shows    -> 2
             // seasons  -> 3
@@ -352,9 +355,6 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
             // worked for 1274 items
             // "X-Plex-Container-Size": 50,
             "X-Plex-Text-Format": "plain",
-            "X-Plex-Product": PlexClientName,
-            "X-Plex-Version": PlexClientVersion,
-            "X-Plex-Client-Identifier": PlexClientID,
             "X-Plex-Token": plexToken,
           }),
         {
@@ -421,10 +421,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       let resp = await fetch(
         "https://plex.tv/api/home/users?" +
-          stringify({
-            "X-Plex-Product": PlexClientName,
-            "X-Plex-Version": PlexClientVersion,
-            "X-Plex-Client-Identifier": PlexClientID,
+          stringifyPlex({
             "X-Plex-Token": plexToken,
           }),
         {
@@ -449,10 +446,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       let resp = await fetch(
         "https://plex.tv/api/users?" +
-          stringify({
-            "X-Plex-Product": PlexClientName,
-            "X-Plex-Version": PlexClientVersion,
-            "X-Plex-Client-Identifier": PlexClientID,
+          stringifyPlex({
             "X-Plex-Token": plexToken,
           }),
         {
@@ -541,12 +535,9 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       let resp = await fetch(
         `${plexApiBaseURL}:/${markUnwatched ? "un" : ""}scrobble?` +
-          stringify({
+          stringifyPlex({
             identifier: "com.plexapp.plugins.library",
             key: plexRatingKey,
-            "X-Plex-Product": PlexClientName,
-            "X-Plex-Version": PlexClientVersion,
-            "X-Plex-Client-Identifier": PlexClientID,
             "X-Plex-Token": plexToken,
           }),
         {
@@ -577,15 +568,12 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       let resp = await fetch(
         `${plexApiBaseURL}library/metadata/${plexRatingKey}/matches?` +
-          stringify({
+          stringifyPlex({
             manual: 1,
             title: term,
             agent: "tv.plex.agents.movie",
             year: year,
             language: "en-US",
-            "X-Plex-Product": PlexClientName,
-            "X-Plex-Version": PlexClientVersion,
-            "X-Plex-Client-Identifier": PlexClientID,
             "X-Plex-Token": plexToken,
             "X-Plex-Language": "en",
           }),
@@ -616,7 +604,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       let resp = await fetch(
         `${plexApiBaseURL}:/rate?` +
-          stringify({
+          stringifyPlex({
             identifier: "com.plexapp.plugins.library",
             key: plexRatingKey,
             rating: rating,
@@ -624,11 +612,8 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         {
           headers: {
             accept: "application/json, text/plain, */*",
-            "x-plex-client-identifier": PlexClientID,
-            "x-plex-product": PlexClientName,
             "x-plex-text-format": "plain",
             "x-plex-token": plexToken,
-            "x-plex-version": PlexClientVersion,
           },
           method: "PUT",
         }
@@ -656,6 +641,29 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     );
   };
 
+  const getArtWorks = async ({ plexToken, plexApiBaseURL, plexRatingKey }) => {
+    let resp = await fetch(
+      `${plexApiBaseURL}library/metadata/${plexRatingKey}/arts?` +
+        stringifyPlex({
+          "X-Plex-Token": plexToken,
+        }),
+      {
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    ).catch(throwError);
+  };
+
+  const getPosters = async ({ plexToken, plexApiBaseURL, plexRatingKey }) => {
+    let resp = await fetch(
+      `${plexApiBaseURL}library/metadata/${plexRatingKey}/posters?` +
+        stringifyPlex({
+          "X-Plex-Token": plexToken,
+        })
+    ).catch(throwError);
+  };
+
   __API__.plex.oauth.oauthStart = oauthStart;
   __API__.plex.oauth.checkTokenValiditiy = checkTokenValiditiy;
   __API__.plex.oauth.getAuthToken = getAuthToken;
@@ -674,4 +682,6 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   __API__.plex.apis.matchItemBySearchTerm = matchItemBySearchTerm;
   __API__.plex.apis.rateMediaItem = rateMediaItem;
   __API__.plex.apis.plexThumbURL = plexThumbURL;
+  __API__.plex.apis.getArtWorks = getArtWorks;
+  __API__.plex.apis.getPosters = getPosters;
 })();

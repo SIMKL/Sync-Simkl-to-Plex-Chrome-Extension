@@ -144,13 +144,24 @@ This document describes the development workflow that went into this project.
 
 #### `9/2/2022`
 
-- `@phanirithvij` (TBA)
+- `@phanirithvij` (4 hrs total)
   - Some plex endpoints don't return JSON even if `accept: application/json` is specified
     - So xml needs to be parsed in the background script where `DOMParser` isn't available.
     - I chose to use txml (tiny xml) parser
   - plex.tv also auto closes the devtools when inspecting
     - `"C:\Program Files (x86)\Google\Chrome Beta\Application\chrome.exe" "https://app.plex.tv/desktop/#!/" --remote-debugging-port=9222 --user-data-dir="C:\Users\Rithvij\AppData\Local\Temp"`
     - Discovered the above command to kinda work in combination with `chrome://inspect`
+
+#### `10/2/2022-14/2/2022`
+
+- `@phanirithvij`
+  - [ ] Sync done
+    - [ ] Error handling for UI
+    - [ ] Content matching by episode, season, show, movie
+      - Simkl returns ...
+  - TODO: Show a warning message before user starts syncing for the very first time that their plex library must be perfectly organized and each movie/show/season/episode needs to be recognized by plex as something. If the episodes and seasons recognized are erroneous then syncing will be erroneous.
+    - eg. if `S01` for some reason is recognised as `S02` in plex, then it will have `S02` episodes status marked.
+  - mention the official plex guide?
 
 #### Notes (`@phanirithvij`)
 

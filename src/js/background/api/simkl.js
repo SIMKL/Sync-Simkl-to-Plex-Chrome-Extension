@@ -5,7 +5,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 
   const checkTokenValiditiy = async (responseChannel, token) => {
     if (!!token) {
-      let { valid } = await getLastActivity(null, token);
+      let { valid } = await getLastActivity(token);
       responseChannel(makeSuccessResponse({ authToken: token, valid }));
       return;
     }
@@ -13,7 +13,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       simklOauthToken: null,
     });
     if (!!simklOauthToken) {
-      let { valid } = await getLastActivity(null, simklOauthToken);
+      let { valid } = await getLastActivity(simklOauthToken);
       responseChannel(
         makeSuccessResponse({ authToken: simklOauthToken, valid })
       );
@@ -98,7 +98,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   // const getAllItemsFullSync =
-  const getAllItems = async (responseChannel, { dateFrom, token }) => {
+  const getAllItems = async ({ dateFrom, token }, responseChannel) => {
     let types = ["shows", "movies", "anime"];
     let responses = await Promise.all(
       types.map((type) =>
@@ -117,16 +117,25 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
         )
       )
     );
-    responses.forEach(async (resp, i) => {
-      if (resp.status == 200) {
-        let items = await resp.json();
-        console.debug("Got items: ", types[i], resp.headers);
-      }
-    });
-    return true;
+    let data = {};
+    await Promise.all(
+      responses.map(async (resp, i) => {
+        if (resp.status == 200) {
+          let items = await resp.json();
+          console.debug("Got items for: ", types[i]);
+          data[types[i]] = items[types[i]];
+        }
+      })
+    );
+    if (!!responseChannel) {
+      Object.keys(data).length == 3
+        ? responseChannel(makeSuccessResponse(data))
+        : responseChannel(makeErrorResponse(data));
+    }
+    return { success: Object.keys(data).length == 3, data };
   };
 
-  const getLastActivity = async (responseChannel, token) => {
+  const getLastActivity = async (token, responseChannel = null) => {
     let resp = await fetch("https://api.simkl.com/sync/activities", {
       headers: {
         "Content-Type": "application/json",

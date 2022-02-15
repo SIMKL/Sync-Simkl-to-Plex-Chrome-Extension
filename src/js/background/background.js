@@ -46,6 +46,8 @@ let __API__ = {
       markMovieWatched: _2,
       lookupItemByGuid: _1,
       plexThumbURL: n_1,
+      getArtWorks: _1,
+      getPosters: _1,
     },
   },
   simkl: {

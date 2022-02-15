@@ -88,13 +88,4 @@ const checkSimklAuthTokenValidity = () => {
   );
 };
 
-const fetchSimklFullHistory = () => {
-  chrome.runtime.sendMessage(
-    { type: CallType.call, method: CallType.apis.simkl.getAllItems },
-    (response) => {
-      console.debug(response);
-    }
-  );
-};
-
 // })();

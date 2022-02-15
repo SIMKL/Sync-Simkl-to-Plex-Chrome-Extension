@@ -101,18 +101,18 @@ const startBgSync = async () => {
     UIEvents.connectDone();
     console.debug(fullLibraryList);
     // start processing the results
-    let data = fullLibraryList.map((l) => {
+    let fullList = fullLibraryList.map((l) => {
       if (l.error) {
         console.error(l.error);
         return [];
       }
       return l.items.filter((item) => !!item.Guid);
     });
-    console.debug(data);
+    console.debug(fullList);
 
     // get simkl last activity
     UIEvents.connectStarted("simkl");
-    let la = await __API__.simkl.apis.getLastActivity(null, simklOauthToken);
+    let la = await __API__.simkl.apis.getLastActivity(simklOauthToken);
     let { valid: simklTokenValid, info: simklLastActivity } = la;
     if (!simklTokenValid) {
       // session expired or some other error
@@ -127,9 +127,12 @@ const startBgSync = async () => {
       UIEvents.connectFailed("simkl");
       return;
     }
-    await sleep(1000);
-    UIEvents.connectDone("simkl");
     console.debug(simklLastActivity);
+
+    // get simkl full history
+    let simklHist = await __API__.simkl.apis.getAllItems({ token: simklOauthToken });
+    console.debug(simklHist);
+    UIEvents.connectDone("simkl");
   } else {
     if (!simklOauthToken) {
       UIEvents.tokenExpired("simkl");
