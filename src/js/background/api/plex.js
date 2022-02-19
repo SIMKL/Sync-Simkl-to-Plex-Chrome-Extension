@@ -208,7 +208,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       // oauth second step (after redirect)
       resp["code"] = plexPinCode;
       resp["id"] = plexPinID;
-      chrome.storage.local.set({ plexPinCode: null, plexPinID: null });
+      chrome.storage.local.remove("plexPinCode", "plexPinID");
       let response = await getAuthToken(resp["id"], resp["code"]);
       if (response == null) {
         return;
@@ -468,6 +468,24 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     }
   };
 
+  const markMovieWatched = (
+    { plexToken, plexApiBaseURL, movieKey, name },
+    markUnwatched = false
+  ) => {
+    return scrobbleKey(
+      {
+        plexToken,
+        plexApiBaseURL,
+        plexRatingKey: movieKey,
+        info: {
+          type: "movie",
+          name: name,
+        },
+      },
+      markUnwatched
+    );
+  };
+
   const markEpisodeWatched = (
     { plexToken, plexApiBaseURL, episodeKey, name },
     markUnwatched = false
@@ -641,27 +659,77 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     );
   };
 
+  const getBgUrl = async (
+    { plexToken, plexApiBaseURL, plexRatingKey },
+    responseChannel = null,
+    portrait = true
+  ) => {
+    let url =
+      `${plexApiBaseURL}photo/:/transcode?` +
+      stringify({
+        width: portrait ? 800 : 1920,
+        height: portrait ? 600 : 1080,
+        minSize: 1,
+        opacity: portrait ? 10 : 70,
+        upscale: 1,
+        background: "343a3f",
+        url: portrait
+          ? await getArtWorks({ plexToken, plexRatingKey, plexApiBaseURL })
+          : await getPosters({ plexToken, plexRatingKey, plexApiBaseURL }),
+        "X-Plex-Token": plexToken,
+      });
+    !!responseChannel && responseChannel(url);
+    return url;
+  };
+
   const getArtWorks = async ({ plexToken, plexApiBaseURL, plexRatingKey }) => {
-    let resp = await fetch(
-      `${plexApiBaseURL}library/metadata/${plexRatingKey}/arts?` +
-        stringifyPlex({
-          "X-Plex-Token": plexToken,
-        }),
-      {
-        headers: {
-          Accept: "application/json",
-        },
+    try {
+      let resp = await fetch(
+        `${plexApiBaseURL}library/metadata/${plexRatingKey}/arts?` +
+          stringifyPlex({
+            "X-Plex-Token": plexToken,
+          }),
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      ).catch(throwError);
+      if (resp.status == 200) {
+        let data = await resp.json();
+        return data.MediaContainer.Metadata[0].key;
       }
-    ).catch(throwError);
+      console.debug(resp.status, await resp.text());
+      return null;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
   };
 
   const getPosters = async ({ plexToken, plexApiBaseURL, plexRatingKey }) => {
-    let resp = await fetch(
-      `${plexApiBaseURL}library/metadata/${plexRatingKey}/posters?` +
-        stringifyPlex({
-          "X-Plex-Token": plexToken,
-        })
-    ).catch(throwError);
+    try {
+      let resp = await fetch(
+        `${plexApiBaseURL}library/metadata/${plexRatingKey}/posters?` +
+          stringifyPlex({
+            "X-Plex-Token": plexToken,
+          }),
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      ).catch(throwError);
+      if (resp.status == 200) {
+        let data = await resp.json();
+        return data.MediaContainer.Metadata[0].key;
+      }
+      console.debug(resp.status, await resp.text());
+      return null;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
   };
 
   __API__.plex.oauth.oauthStart = oauthStart;
@@ -675,6 +743,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   __API__.plex.apis.healthCheck = healthCheck;
   __API__.plex.apis.getUserProfiles = getUserProfiles;
   __API__.plex.apis.getUserProfileInfo = getUserProfileInfo;
+  __API__.plex.apis.markMovieWatched = markMovieWatched;
   __API__.plex.apis.markEpisodeWatched = markEpisodeWatched;
   __API__.plex.apis.markSeasonWatched = markSeasonWatched;
   __API__.plex.apis.markShowWatched = markShowWatched;
@@ -684,4 +753,5 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   __API__.plex.apis.plexThumbURL = plexThumbURL;
   __API__.plex.apis.getArtWorks = getArtWorks;
   __API__.plex.apis.getPosters = getPosters;
+  __API__.plex.apis.getBgUrl = getBgUrl;
 })();

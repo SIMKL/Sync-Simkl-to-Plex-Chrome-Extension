@@ -21,7 +21,7 @@ const logoutPlex = () => {
 };
 
 const finishLogoutPlex = (_message) => {
-  chrome.storage.sync.set({ plexOauthToken: null }, () => {
+  chrome.storage.sync.remove("plexOauthToken", () => {
     setUIPlexDisconnected();
   });
 };

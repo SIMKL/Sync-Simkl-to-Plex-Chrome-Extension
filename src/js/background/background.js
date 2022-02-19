@@ -18,10 +18,10 @@ importScripts("../vendor/txml@5.1.1.min.js");
 // TODO: remove these after migrating to type script
 // or after done developing with this part
 // these solely exist for IDE auto completions
-const n_1 = (_) => {}
-const n_2 = (_, __) => {}
-const _1 = async (_) => {}
-const _2 = async (_, __) => {}
+const n_1 = (_) => {};
+const n_2 = (_, __) => {};
+const _1 = async (_) => {};
+const _2 = async (_, __) => {};
 
 // this structure is required
 // but _1, _2, n_1, n_2, etc. can be replaced with null.
@@ -79,8 +79,8 @@ importScripts("./api/simkl.js");
 // for any connected clients to use
 importScripts("../common.js");
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.debug("[SW] Got message:", message, "from:", sender);
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  // console.debug("[SW] Got message:", message, "from:", sender);
   switch (message.type) {
     case CallType.call:
       switch (message.method) {
@@ -100,11 +100,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           __API__.simkl.oauth.checkTokenValiditiy(sendResponse, message.token);
           return true;
 
-          // bg handlers
+        // bg handlers
         case CallType.bg.addInterceptListeners:
           addInterceptListeners();
           return true;
 
+        // API methods
+        case CallType.apis.plex.getBgUrl:
+          __API__.plex.apis.getBgUrl(message, sendResponse, message.portrait);
+          return true;
         default:
           console.debug("Unknown message method", message);
           break;

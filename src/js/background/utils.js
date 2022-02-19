@@ -1,11 +1,3 @@
-const stringify = (json) => {
-  return Object.keys(json)
-    .map((key) => {
-      return encodeURIComponent(key) + "=" + encodeURIComponent(json[key]);
-    })
-    .join("&");
-};
-
 const makeErrorResponse = (data) => {
   if (typeof data === "string") {
     return { error: data };

@@ -75,7 +75,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
         // got the plex authtoken
         // successfully logged in
         // code is one time use only forget it
-        chrome.storage.local.set({ simklPinCode: null });
+        chrome.storage.local.remove("simklPinCode");
         responseChannel(
           makeSuccessResponse({ authToken: response["access_token"] })
         );
@@ -97,42 +97,78 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     return true;
   };
 
-  // const getAllItemsFullSync =
-  const getAllItems = async ({ dateFrom, token }, responseChannel) => {
+  const getAllItems = async ({ dates = {}, token }, responseChannel) => {
+    console.debug("getAllItems: ", dates, token);
     let types = ["shows", "movies", "anime"];
-    let responses = await Promise.all(
-      types.map((type) =>
-        fetch(
-          `https://api.simkl.com/sync/all-items/${type}?` +
-            "episode_watched_at=yes" +
-            (!dateFrom ? "" : `&date_from=${dateFrom}`) +
-            (type == "movies" ? "" : "&extended=full"),
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-              "simkl-api-key": SimklClientID,
-            },
-          }
+    let serverTime;
+    try {
+      let responses = await Promise.all(
+        types.map((type) =>
+          fetch(
+            `https://api.simkl.com/sync/all-items/${type}?` +
+              "episode_watched_at=yes" +
+              (type in dates ? `&date_from=${dates[type]}` : "") +
+              (type == "movies" ? "" : "&extended=full"),
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+                "simkl-api-key": SimklClientID,
+              },
+            }
+          ).catch((err) => {
+            throw err;
+          })
         )
-      )
-    );
-    let data = {};
-    await Promise.all(
-      responses.map(async (resp, i) => {
-        if (resp.status == 200) {
-          let items = await resp.json();
-          console.debug("Got items for: ", types[i]);
-          data[types[i]] = items[types[i]];
-        }
-      })
-    );
-    if (!!responseChannel) {
-      Object.keys(data).length == 3
-        ? responseChannel(makeSuccessResponse(data))
-        : responseChannel(makeErrorResponse(data));
+      );
+      let data = {};
+      await Promise.all(
+        responses.map(async (resp, i) => {
+          if (!serverTime) {
+            serverTime = await _determineServerTime(resp);
+          }
+          if (resp.status == 200) {
+            let items = await resp.json();
+            if (items) {
+              console.debug("Got items for: ", types[i]);
+              data[types[i]] = items[types[i]];
+              return;
+            }
+            data[types[i]] = [];
+          }
+        })
+      );
+      if (!!responseChannel) {
+        Object.keys(data).length == 3
+          ? responseChannel(makeSuccessResponse(data))
+          : responseChannel(makeErrorResponse(data));
+      }
+      return { success: Object.keys(data).length == 3, data, serverTime };
+    } catch (error) {
+      return { success: false, error: error, serverTime };
     }
-    return { success: Object.keys(data).length == 3, data };
+  };
+
+  const _determineServerTime = async (simklResp) => {
+    let st = null;
+    // get it from simkl date header
+    if (simklResp.headers.has("date")) {
+      st = new Date(simklResp.headers.get("date")).toISOString();
+      return st;
+    }
+    // fallback to google's date header
+    let googtime = await fetch("https://google.com", {
+      method: "HEAD",
+    }).catch((_) => {});
+
+    if (googtime.headers.has("date")) {
+      st = new Date(googtime.headers.get("date")).toISOString();
+      return st;
+    }
+    // worst case scenario: use client's clock time
+    let now = new Date().toISOString();
+    st = now;
+    return st;
   };
 
   const getLastActivity = async (token, responseChannel = null) => {

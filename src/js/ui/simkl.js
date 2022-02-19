@@ -22,7 +22,7 @@ const logoutSimkl = () => {
 };
 
 const finishLogoutSimkl = (_message) => {
-  chrome.storage.sync.set({ simklOauthToken: null }, () => {
+  chrome.storage.sync.remove("simklOauthToken", () => {
     setUISimklDisconnected();
   });
 };

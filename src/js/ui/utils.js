@@ -82,7 +82,7 @@ const setBrowserInfo = () => {
     {
       browserInfo: {
         browserVersion: BrowserVersion,
-        browserName: "Chrome",
+        browserName: "Chrome", // as of now only a chrome extension
         osName: OSName,
         osLanguage: OSLanguage,
       },

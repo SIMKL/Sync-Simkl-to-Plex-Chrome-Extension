@@ -6,8 +6,8 @@ const restartLibrarySync = async (durationHrs = DefaultSyncPeriod) => {
   console.debug("Starting library sync, duration", durationHrs, "hrs");
   chrome.alarms.create("plex-libray-sync", {
     when: Date.now() + 100, // start immediately
-    periodInMinutes: 0.3,
     // periodInMinutes: durationHrs * 60,
+    periodInMinutes: 0.1,
   });
 };
 
@@ -159,6 +159,8 @@ const uiBroadcastSyncState = (enabled = true) => {
   chrome.runtime.sendMessage(message);
 };
 
+// Background image
+
 const uiSetLandscapeUrl = async (url) => {
   if (!url) {
     let { landScapeUrl } = await chrome.storage.local.get({
@@ -169,6 +171,7 @@ const uiSetLandscapeUrl = async (url) => {
       return;
     }
   }
+  // TODO: check if not 404 or reachable and set it.
   setCssVar("--background-image-url", `url('${url}')`);
 };
 
@@ -187,10 +190,36 @@ const uiSetPortraitUrl = async (url) => {
   setCssVar("--background-image-url", `url('${url}')`);
 };
 
+const updateBackgroundURL = async (
+  plexApiBaseURL,
+  plexRatingKey,
+  plexToken
+) => {
+  let message = {
+    type: CallType.call,
+    method: CallType.apis.plex.getBgUrl,
+    plexToken: plexToken,
+    plexApiBaseURL: plexApiBaseURL,
+    plexRatingKey: plexRatingKey,
+  };
+  chrome.storage.local.set({
+    landScapeUrl: await chrome.runtime.sendMessage({
+      ...message,
+      portrait: false,
+    }),
+    portraitUrl: await chrome.runtime.sendMessage({
+      ...message,
+      portrait: true,
+    }),
+  });
+};
+
 const uiHandleBackgroundImg = () => {
   let aspectRatio = document.body.clientWidth / document.body.clientHeight;
   Math.round(aspectRatio - 0.5) >= 1 ? uiSetLandscapeUrl() : uiSetPortraitUrl();
 };
+
+// END: Background image
 
 const uiSetPopupViewState = () => {
   if (inPopup()) {
@@ -265,6 +294,9 @@ const onLoad = async () => {
           // TODO: remove the sync-errors
           startLibrarySync(durationInput.value);
           uiBroadcastSyncState(true);
+          await chrome.storage.local.set({
+            doFullSync: true,
+          });
         }
       }
     }
@@ -280,6 +312,7 @@ const onLoad = async () => {
     if (!!plexInstanceUrl) {
       urlInput.value = plexInstanceUrl;
       validateInputUrl(urlInput.value);
+      // updateBackgroundURL(plexInstanceUrl, , 2681);
     }
     if (!!syncPeriod) {
       durationInput.value = syncPeriod;
@@ -290,11 +323,6 @@ const onLoad = async () => {
   })();
 
   uiSetPopupViewState();
-  window.plexToken = "557hnxdHxNRXjrcP5PsF";
-  await chrome.storage.local.set({
-    landScapeUrl: `http://127.0.0.1:32400/photo/:/transcode?width=1920&height=1080&minSize=1&opacity=70&background=343a3f&url=%2Flibrary%2Fmetadata%2F910%2Fart%2F1643865295%3FX-Plex-Token%3D${plexToken}&X-Plex-Token=${plexToken}`,
-    portraitUrl: `http://127.0.0.1:32400/photo/:/transcode?width=800&height=600&minSize=1&upscale=1&opacity=10&url=%2Flibrary%2Fmetadata%2F932%2Fthumb%2F1643865288%3FX-Plex-Token%3D${plexToken}&X-Plex-Token=${plexToken}`,
-  });
   uiHandleBackgroundImg();
 };
 
@@ -381,6 +409,9 @@ chrome.runtime.onMessage.addListener((message, sender) => {
           document.body.classList.add("sync-error-simkl");
           uiSyncDisabled();
           stopLibrarySync();
+          break;
+        case ActionType.ui.sync.progress:
+          // TODO: handle earch progress item
           break;
         default:
           console.debug("Unknown action", message);

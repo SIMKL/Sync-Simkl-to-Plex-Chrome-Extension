@@ -63,7 +63,9 @@ const CallType = {
     },
   },
   apis: {
-    plex: {},
+    plex: {
+      getBgUrl: "",
+    },
     simkl: {
       getLastActivity: "",
       getAllItems: "",
@@ -105,6 +107,7 @@ const ActionType = {
         unexpected: "",
         sessionexpired: "",
       },
+      progress: "",
     },
   },
 };
@@ -112,3 +115,11 @@ const ActionType = {
 ActionType.enumify();
 
 const DefaultSyncPeriod = 12;
+
+const stringify = (json) => {
+  return Object.keys(json)
+    .map((key) => {
+      return encodeURIComponent(key) + "=" + encodeURIComponent(json[key]);
+    })
+    .join("&");
+};
