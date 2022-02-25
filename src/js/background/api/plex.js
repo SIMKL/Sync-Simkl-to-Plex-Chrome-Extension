@@ -732,6 +732,92 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     }
   };
 
+  /* These api calls might not be useful at the end */
+
+  const createSection = async ({ plexToken, plexApiBaseURL }) => {
+    fetch(
+      `${plexApiBaseURL}library/sections?` +
+        stringifyPlex({
+          name: "Simkl-Movies",
+          type: "movie",
+          agent: "tv.plex.agents.movie",
+          scanner: "Plex Movie",
+          language: "en-US",
+          importFromiTunes: "",
+          enableAutoPhotoTags: "",
+          downloadMedia: "",
+          location: "C:\\Users\\Rithvij\\AppData\\Local\\Temp\\simkl-movies",
+          // TODO: this won't work as arrays aren't supported by `stringify`
+          // location: "C:\\Users\\Rithvij\\AppData\\Local\\Temp\\simkl-movies2",
+          "prefs[hidden]": 2,
+          "prefs[useLocalAssets]": 0,
+          "prefs[useExternalExtras]": 1,
+          "X-Plex-Token": plexToken,
+        }),
+      {
+        headers: {
+          accept: "application/xml",
+        },
+        method: "POST",
+      }
+    );
+  };
+
+  const installedPlexAgents = async (
+    { plexToken, plexApiBaseURL },
+    mediaType = "movies"
+  ) => {
+    try {
+      let resp = await fetch(
+        `${plexApiBaseURL}system/agents?` +
+          stringifyPlex({
+            mediaType: mediaType == "movies" ? 1 : 2,
+            "X-Plex-Token": plexToken,
+          }),
+        {
+          headers: {
+            Accept: "application/xml",
+          },
+        }
+      ).catch(throwError);
+      broadcastOnlineStatus();
+      if (resp.status !== 200) {
+        return {
+          status: resp.status,
+          error: await resp.text(),
+          agents: null,
+        };
+      }
+      try {
+        let xml = await resp.text();
+        let xmlData = txml.parse(xml);
+        console.debug(xmlData);
+        let agents = xmlData[1].children
+          .filter((c) => c.tagName == "Agent")
+          .map((c) => c.attributes.identifier);
+        return {
+          status: resp.status,
+          error: null,
+          agents,
+        };
+      } catch (err) {
+        return {
+          status: resp.status,
+          error: err,
+          agents: null,
+        };
+      }
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      console.error(error);
+      return {
+        status: null,
+        error,
+        agents: null,
+      };
+    }
+  };
+
   __API__.plex.oauth.oauthStart = oauthStart;
   __API__.plex.oauth.checkTokenValiditiy = checkTokenValiditiy;
   __API__.plex.oauth.getAuthToken = getAuthToken;
@@ -754,4 +840,5 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   __API__.plex.apis.getArtWorks = getArtWorks;
   __API__.plex.apis.getPosters = getPosters;
   __API__.plex.apis.getBgUrl = getBgUrl;
+  __API__.plex.apis.installedPlexAgents = installedPlexAgents;
 })();

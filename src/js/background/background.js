@@ -10,12 +10,26 @@ self.addEventListener("install", () => {
 
 // https://www.npmjs.com/package/txml/v/5.1.1
 importScripts("../vendor/txml@5.1.1.min.js");
+// https://www.npmjs.com/package/jszip/v/3.7.1
+// https://github.com/Stuk/jszip/blob/master/dist/jszip.min.js
+// importScripts("../vendor/jszip@3.7.1.min.js");
+// https://www.npmjs.com/package/jszip-utils/v/0.1.0
+// https://cdn.jsdelivr.net/npm/jszip-utils@0.1.0/dist/jszip-utils.min.js
+// importScripts("../vendor/jszip-utils@0.1.0.min.js");
+// https://www.npmjs.com/package/lzma/v/2.3.2
+// https://cdn.jsdelivr.net/npm/lzma@2.3.2/src/
+// importScripts("../vendor/lzma-c-min@2.3.2.js");
+// importScripts("../vendor/lzma_worker-min@2.3.2.js");
+// importScripts("../vendor/lzma-min@2.3.2.js");
+// https://www.npmjs.com/package/file-saver/v/2.0.5
+// https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js
+importScripts("../vendor/FileSaver@2.0.5.min.js");
 
 // Global state
 
 // Api methods to use globally
 
-// TODO: remove these after migrating to type script
+// TODO: remove these after migrating to typescript
 // or after done developing with this part
 // these solely exist for IDE auto completions
 const n_1 = (_) => {};
@@ -48,6 +62,7 @@ let __API__ = {
       plexThumbURL: n_1,
       getArtWorks: _1,
       getPosters: _1,
+      installedPlexAgents: _2,
     },
   },
   simkl: {

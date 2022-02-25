@@ -14,6 +14,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     });
     if (!!simklOauthToken) {
       let { valid } = await getLastActivity(simklOauthToken);
+      console.debug("Saved simkl token:", simklOauthToken);
       responseChannel(
         makeSuccessResponse({ authToken: simklOauthToken, valid })
       );

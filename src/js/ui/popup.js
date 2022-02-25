@@ -92,7 +92,7 @@ const requestPlexURIPermissions = async (plexUrl) => {
       alert(`Invalid Url: ${plexUrl}\n${error}`);
     }
     if (!allowed) {
-      alert(`Access for: ${plexUrl} denined by you, can't perform anything.`);
+      alert(`Access for: ${plexUrl} denined by you, it is required.`);
       return false;
     } else {
       allowedOrigins.push(plexUrl.originUrl());
@@ -133,7 +133,7 @@ const requestRedirectInterceptPermissions = async () => {
     console.debug("Allowed?", havePermission);
   }
   if (!havePermission) {
-    alert("Permission was denied by you, now I can't do shit!");
+    alert("Permission was denied by you, it is required to redirect back to the extension");
     return;
   }
   let message = {

@@ -68,17 +68,84 @@ const userConfig = async () => {
   };
 };
 
-const plexLibraryGuidLut = (fullList) => {
+const plexLibraryGuidLut = async (fullList, pconf) => {
   let guidLut = {};
+  let unknownGuidList = [];
+  let pAgents = await plexInstalledAgents(pconf);
+  let pErr = null;
+  if (pAgents.movies.error || pAgents.shows.error) {
+    pErr = pAgents.movies.error;
+  }
+  pAgents.shows = pAgents.shows.agents || [];
+  pAgents.movies = pAgents.movies.agents || [];
+  console.debug("Agents list", pAgents);
+
   fullList.forEach((type) =>
     type.forEach((item) => {
-      let guids = item.Guid.map((guid) => guid.id);
-      guids.forEach((guid) => {
-        guidLut[guid] = item;
-      });
+      if (!!item.Guid) {
+        let guids = item.Guid.map((guid) => guid.id);
+        guids.forEach((guid) => {
+          guidLut[guid] = item;
+        });
+      } else if (!!item.guid) {
+        let parts = item.guid.split("://");
+        if (item.guid.startsWith("local://")) {
+          // TODO: do matching via title search or something else
+        } else if ([...pAgents.shows, ...pAgents.movies].includes(parts[0])) {
+          // remove ?query and get the first part of path
+          // and it won't raise any exceptions as
+          // `str.spilt('delim')[0]` will be `str` if `delim` not in `str`
+          let idx = parts[1].split("?")[0].split("/")[0];
+          // if using absolute-series-scanner or hama or tvdb
+          // guid = "com.plexapp.agents.hama://tvdb-79895/6/332?lang=en"
+          // guid = "com.plexapp.agents.themoviedb://73223/1/1?lang=en"
+          // i.e. well known agents
+          switch (parts[0]) {
+            case "com.plexapp.agents.none":
+              // personal media => ignore
+              break;
+            case "com.plexapp.agents.hama":
+              // eg: parts[1] = tvdb-75897/6/2?lang=en
+              // => idx = tvdb-75897
+              let [sourceT, id_] = idx.split("-");
+              guidLut[`${sourceT}://${id_}`] = item;
+              break;
+            case "com.plexapp.agents.imdb": // plex legacy
+              guidLut[`imdb://${idx}`];
+              break;
+            case "com.plexapp.agents.themoviedb":
+              guidLut[`tmdb://${idx}`];
+              break;
+            case "com.plexapp.agents.thetvdb":
+              guidLut[`tvdb://${idx}`];
+              break;
+            case "tv.plex.agents.series":
+            case "tv.plex.agents.movie":
+              // these two would've been handled in
+              // if (item.Guid) block instead of this
+              // elseif (item.guid)  block
+              console.debug("unreachable", item.guid);
+              break;
+            default:
+              console.debug("Unknown agent", parts[0]);
+              break;
+          }
+        } else if (pAgents.movies.length == 0 || pAgents.shows.length == 0) {
+          // TODO: maybe plex instance is offline
+          console.error(pErr);
+        } else unknownGuidList.push(item.guid);
+      }
     })
   );
+  console.debug(unknownGuidList);
   return guidLut;
+};
+
+const plexInstalledAgents = async (apiConf) => {
+  return {
+    shows: await __API__.plex.apis.installedPlexAgents(apiConf, "shows"),
+    movies: await __API__.plex.apis.installedPlexAgents(apiConf, "movies"),
+  };
 };
 
 const startBgSync = async () => {
@@ -93,7 +160,8 @@ const startBgSync = async () => {
     };
     UIEvents.connectStarted("plex");
     let { libraries, error } = await __API__.plex.apis.getLibrarySections(
-      pconf
+      pconf,
+      false
     );
     if (!libraries) {
       console.error(error);
@@ -121,12 +189,12 @@ const startBgSync = async () => {
         console.error(l.error);
         return [];
       }
-      return l.items.filter((item) => !!item.Guid);
+      return l.items.filter((item) => !!item.Guid || !!item.guid);
     });
     console.debug(fullList);
 
     // TODO guid lut
-    let guidLut = plexLibraryGuidLut(fullList);
+    let guidLut = await plexLibraryGuidLut(fullList, pconf);
     console.debug(guidLut);
     UIEvents.connectDone("plex");
 
@@ -155,9 +223,9 @@ const startBgSync = async () => {
       }
       console.debug(simklLastActivity);
       dates = {
-        anime: simklLastActivity["anime"]["all"],
-        movies: simklLastActivity["movies"]["all"],
-        shows: simklLastActivity["tv_shows"]["all"],
+        anime: simklLastActivity[MediaType.anime]["all"],
+        movies: simklLastActivity[MediaType.movies]["all"],
+        shows: simklLastActivity["tv_shows"]["all"], // is not shows but tv_shows
       };
     } else {
       console.debug("Doing a full sync");
@@ -184,86 +252,115 @@ const startBgSync = async () => {
     console.debug(simklChanges, serverTime);
     UIEvents.connectDone("simkl");
 
-    const simklMovieIdstoPlexIds = (media) => {
-      return simklIdsToPlexIds(media).filter((x) =>
-        ["imdb", "tmdb"].includes(x.split(":")[0])
-      );
-    };
-
-    let idTypes = {
-      ids: {
-        movies: {},
-        anime: {},
-        shows: {},
-      },
-      totals: {
-        movies: 0,
-        anime: 0,
-        shows: 0,
-      },
-    };
-    for (let k of Object.keys(simklChanges)) {
-      if (k == "movies") {
-        for (let movie of simklChanges[k]) {
-          if (!movie.movie.ids) {
-            console.debug("Movie has no ids", movie);
-            continue;
+    for (let mediaType of Object.keys(simklChanges)) {
+      // mediaType ∈ {'anime', 'movies', 'shows'}
+      switch (mediaType) {
+        case MediaType.movies:
+          for (let movie of simklChanges[mediaType]) {
+            if (!movie.movie.ids) {
+              console.debug("Movie has no ids", movie);
+              continue;
+            }
+            let mPlexids = simklIdsToPlexIds(movie.movie, mediaType);
+            let plexMovie = mPlexids
+              .map((id) => {
+                guidLut[id];
+              })
+              .filter((m) => m);
+            if (plexMovie.length > 0) {
+              console.debug("Movie was found in plex library", plexMovie);
+              return;
+              // continue;
+            } else {
+              // console.debug(
+              //   "Movie was not found in plex library",
+              //   movie.movie.ids.slug
+              // );
+            }
+            switch (movie.status) {
+              case "completed":
+                // await __API__.plex.apis.markMovieWatched({
+                //   ...pconf,
+                //   // movieKey: plexMovie[0].ra,
+                // });
+                break;
+              case "plantowatch":
+                break;
+              case "notinteresting":
+                break;
+              default:
+                break;
+            }
+            // console.debug(movie);
+            // movie.status
+            // movie.user_rating
+            // movie.movie.ids.{imdb,tmdb,tvdb,tvdbslug}
+            // break;
           }
-          idTypes.totals.movies += 1;
-          Object.keys(movie.movie.ids).forEach((id) => {
-            id in idTypes.ids[k]
-              ? (idTypes.ids[k][id] += 1)
-              : (idTypes.ids[k][id] = 1);
-          });
-          // let ids = simklMovieIdstoPlexIds(movie);
-          if (movie.status == "completed") {
-            // await __API__.plex.apis.markMovieWatched({
-            //   ...pconf,
-            //   // movieKey: guidLut[2]
-            // });
+          break;
+        case MediaType.shows:
+          for (let show of simklChanges[mediaType]) {
+            if (!show.show.ids) {
+              console.debug("Show has no ids", show);
+              continue;
+            }
+            switch (show.status) {
+              case "completed":
+                break;
+              case "watching":
+                break;
+              case "notinteresting":
+                break;
+              case "hold":
+                break;
+              case "plantowatch":
+                break;
+              default:
+                break;
+            }
+            // console.debug(show);
+            // show.status
+            // show.user_rating
+            // show.show.ids.{imdb,tmdb,tvdb,tvdbslug}
+            // show.seasons
+            // break;
           }
-          // console.debug(movie);
-          // movie.status
-          // movie.user_rating
-          // movie.movie.ids.{imdb,tmdb,tvdb,tvdbslug}
-          // break;
-        }
-      } else {
-        // TODO: handle anime differently, skip for now
-        // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
-        // as a reference
-        let tvdbSlugsS = [];
-        for (let show of simklChanges[k]) {
-          if (!show.show.ids) {
-            console.debug("Show has no ids", show);
-            continue;
-          }
-          if (k == "anime") {
-            let keys = Object.keys(show.show.ids);
+          break;
+        case MediaType.anime:
+          // TODO: handle anime differently, skip for now
+          // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
+          // as a reference
+          let tvdbSlugsS = [];
+          for (let anime of simklChanges[mediaType]) {
+            if (!anime.show.ids) {
+              console.debug("Show has no ids", anime);
+              continue;
+            }
+            let keys = Object.keys(anime.show.ids);
             if (keys.includes("tvdbslug") && !keys.includes("tvdb")) {
-              tvdbSlugsS.push(show.show.ids);
+              tvdbSlugsS.push(anime.show.ids);
+            }
+            switch (anime.status) {
+              case "completed":
+                break;
+              case "watching":
+                break;
+              case "notinteresting":
+                break;
+              case "hold":
+                break;
+              case "plantowatch":
+                break;
+              default:
+                break;
             }
           }
-
-          idTypes.totals[k] += 1;
-          Object.keys(show.show.ids).forEach((id) => {
-            id in idTypes.ids[k]
-              ? (idTypes.ids[k][id] += 1)
-              : (idTypes.ids[k][id] = 1);
-          });
-          // console.debug(show);
-          // show.status
-          // show.user_rating
-          // show.show.ids.{imdb,tmdb,tvdb,tvdbslug}
-          // show.seasons
-          // break;
-        }
-
-        console.log(tvdbSlugsS);
+          console.log(tvdbSlugsS);
+          break;
+        default:
+          break;
       }
     }
-    console.debug(idTypes);
-    return;
 
     // TODO: start sync
     for (let type of fullList) {
@@ -295,30 +392,6 @@ const startBgSync = async () => {
   }
 };
 
-const plexDiscover = async () => {
-  let config = await userConfig();
-  let { plexInstanceUrl, plexOauthToken } = config;
-  var { servers, error } = await __API__.plex.apis.getLocalServers({
-    plexApiBaseURL: plexInstanceUrl,
-    plexToken: plexOauthToken,
-  });
-  if (!servers) {
-    console.error(error);
-    let message = {
-      type: ActionType.action,
-      action: ActionType.ui.sync.plex.unexpected,
-    };
-    chrome.runtime.sendMessage(message);
-  }
-  var { devices, error } = await __API__.plex.apis.getUserDevices(
-    plexOauthToken
-  );
-  if (!devices) {
-    console.error(error);
-  }
-  console.debug(servers, devices);
-};
-
 const syncDone = (serverTime) => {
   // sync done
   chrome.storage.local.set({
@@ -326,6 +399,54 @@ const syncDone = (serverTime) => {
   });
   chrome.storage.local.remove("doFullSync");
 };
+
+/*
+  Possible ids
+  common:
+    simkl, slug
+    fb, imdb, instagram, tw
+    offen
+    tmdb
+  movies:
+  shows:
+    tvdb, tvdbslug, zap2it
+  anime:
+    allcin, anfo, anidb, ann, crunchyroll, mal, offjp
+    tvdbslug, vndb, wikien, wikijp, zap2it
+*/
+const simklIdsToPlexIds = (mediaInfo, mediaType) => {
+  let ids = [];
+  let allIds = Object.keys(mediaInfo.ids);
+  switch (mediaType) {
+    case MediaType.movies:
+      ids = allIds.filter((id) => ["imdb", "tmdb", "tvdb"].includes(id));
+      break;
+    case MediaType.shows:
+      ids = allIds.filter((id) => ["tvdb", "imdb", "tmdb"].includes(id));
+      break;
+    case MediaType.anime:
+      ids = allIds.filter((id) =>
+        ["tvdb", "tvdbslug", "imdb", "anidb"].includes(id)
+      );
+      break;
+    default:
+      ids = allIds;
+      break;
+  }
+  ids = ids.map((id) => `${id}://${mediaInfo.ids[id]}`);
+  return ids;
+};
+
+const simklMovieIdstoPlexIds = (media) =>
+  simklIdsToPlexIds(media.movie, MediaType.movies);
+
+const simklShowIdstoPlexIds = (media) =>
+  simklIdsToPlexIds(media.show, MediaType.shows);
+
+const simklAnimeIdstoPlexIds = (media) =>
+  simklIdsToPlexIds(media.show, MediaType.anime);
+
+// unused might required for later
 
 const fetchAniDBTvDBMappings = async () => {
   try {
@@ -351,28 +472,78 @@ const fetchAniDBTvDBMappings = async () => {
   }
 };
 
-/*
-  Possible ids
-  common:
-    simkl, slug
-    fb, imdb, instagram, tw
-    offen
-    tmdb
-  movies:
-  shows:
-    tvdb, tvdbslug, zap2it
-  anime:
-    allcin, anfo, anidb, ann, crunchyroll, mal, offjp
-    tvdbslug, vndb, wikien, wikijp, zap2it
-*/
-const simklIdsToPlexIds = (media) => {
-  return Object.keys(media.ids).map(
-    (id) =>
-      // ["imdb", "tmdb", "tvdb", "tvdbslug", "anidb"].includes(id)
-      //   ? `${id}://${media.ids[id]}`
-      //   : null
-      `${id}://${media.ids[id]}`
+const plexDiscover = async () => {
+  let config = await userConfig();
+  let { plexInstanceUrl, plexOauthToken } = config;
+  var { servers, error } = await __API__.plex.apis.getLocalServers({
+    plexApiBaseURL: plexInstanceUrl,
+    plexToken: plexOauthToken,
+  });
+  if (!servers) {
+    console.error(error);
+    let message = {
+      type: ActionType.action,
+      action: ActionType.ui.sync.plex.unexpected,
+    };
+    chrome.runtime.sendMessage(message);
+  }
+  var { devices, error } = await __API__.plex.apis.getUserDevices(
+    plexOauthToken
   );
-  // // remove nulls
-  // .filter((x) => x)
+  if (!devices) {
+    console.error(error);
+  }
+  console.debug(servers, devices);
+};
+
+const zipSimklLibrary = async () => {
+  // create a zip file with all the simkl library entries
+  if (!JSZip) return;
+  let webm = await (
+    await fetch(chrome.runtime.getURL("assets/sample.webm"))
+  ).blob();
+  console.log(webm);
+  let zip = new JSZip();
+  let moviesZ = zip.folder("Simkl Movies");
+  moviesZ.file("{tmdb-634649}.webm", webm, { binary: true });
+  let showsZ = zip.folder("Simkl TV Shows");
+  let showDir = showsZ.folder("{tvdb-323168}");
+  for (let eno = 0; eno < 10000; eno += 1) {
+    if (eno % 1000 == 0) console.debug("Added", eno, "files");
+    showDir.file(`s01e${eno}.webm`, webm, { binary: true });
+  }
+  return zip;
+};
+
+var saveZipFile = async (zip, type = "blob") => {
+  const logLabel = `save_zip_${type}`;
+  console.time(logLabel);
+  let donee = false;
+  let blobdata = await zip.generateAsync(
+    {
+      type: type,
+      compression: "DEFLATE",
+      compressionOptions: {
+        level: 9,
+      },
+    },
+    // update callback
+    (metadata) => {
+      if (donee) return;
+      donee = true;
+      console.timeLog(
+        logLabel,
+        metadata.percent
+        // "progress: " + metadata.percent.toFixed(2) + " %"
+      );
+      if (metadata.currentFile) {
+        console.timeLog(logLabel, "current file = " + metadata.currentFile);
+      }
+    }
+  );
+  // let endTime = performance.now();
+  // console.debug(`${endTime} ended ${type} zipping`);
+  // console.debug(`${type} took ${endTime - startTime} millisecs`);
+  console.timeEnd(logLabel);
+  return blobdata;
 };

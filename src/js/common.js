@@ -1,3 +1,19 @@
+// Consts
+
+const DefaultSyncPeriod = 12;
+
+// Utils
+
+const stringify = (json) => {
+  return Object.keys(json)
+    .map((key) => {
+      return encodeURIComponent(key) + "=" + encodeURIComponent(json[key]);
+    })
+    .join("&");
+};
+
+// Enums
+
 (() => {
   // Get/Set nested Value in an object
   // an impostor which implements obj['p.q.r'] and obj['p.q.r'] = val
@@ -41,14 +57,19 @@
   Object.prototype.nestedIndex = function (key, val) {
     return nestedIndex(this, key, val);
   };
-
-  Object.prototype.enumify = function () {
-    for (let k of this.nestedKeys()) {
-      this.nestedIndex(k, k);
-    }
-    return this;
-  };
 })();
+
+Object.prototype.enumify = function () {
+  // `Object.prototype.enumify`
+  // will fill up nested objects with object[nestedkey] = nestedkey
+  // i.e. {x:'',n:{e:{s:''}}} becomes {x:'x',n:{e:{s:'n.e.s'}}}
+  // thus it is also idempotent
+  // This is just a convinient function to have nested enums
+  for (let k of this.nestedKeys()) {
+    this.nestedIndex(k, k);
+  }
+  return this;
+};
 
 const CallType = {
   call: "",
@@ -75,11 +96,6 @@ const CallType = {
     addInterceptListeners: "",
   },
 };
-// `Object.prototype.enumify` defined in above
-// it will fill up nested objects with object[nestedkey] = nestedkey
-// i.e. {x:'',n:{e:{s:''}}} becomes {x:'x',n:{e:{s:'n.e.s'}}}
-// thus it is also idempotent
-CallType.enumify();
 
 const ActionType = {
   action: "",
@@ -112,14 +128,17 @@ const ActionType = {
   },
 };
 
-ActionType.enumify();
-
-const DefaultSyncPeriod = 12;
-
-const stringify = (json) => {
-  return Object.keys(json)
-    .map((key) => {
-      return encodeURIComponent(key) + "=" + encodeURIComponent(json[key]);
-    })
-    .join("&");
+const MediaType = {
+  movies: "",
+  anime: "",
+  shows: "",
 };
+
+CallType.enumify();
+ActionType.enumify();
+MediaType.enumify();
+
+// Not using these elsewhere so clean them up
+delete Object.prototype.nestedIndex;
+delete Object.prototype.nestedKeys;
+delete Object.prototype.enumify;
