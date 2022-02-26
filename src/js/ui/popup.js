@@ -49,23 +49,51 @@ const validateInputUrl = (inputUrl) => {
   }
 };
 
-const handleLogins = () => {
-  if (window.location.hash == "#plex-oauth") {
-    // this won't request new pin, code this time
-    startPlexOauth();
-    // remove #plex-oauth from url to be safe
+const handleHashRoutes = async () => {
+  let windowHash = window.location.hash;
+  if (windowHash == "") windowHash = "#"; // so that next line will result in ""
+  // remove #plex-oauth or #simkl-oauth from url to be safe
+  // remove #plex-perm or #simkl-perm from url to be safe
+  if (windowHash.startsWith("plex-") || windowHash.startsWith("simkl-"))
     removeWindowHash();
+
+  let loginType = windowHash.split("-")[0].split("#")[1];
+  let permGranted = false;
+  // #plex-perm or #simkl-perm
+  if (windowHash.endsWith("perm")) {
+    let webNavigationPerm = {
+      permissions: ["webNavigation"],
+    };
+    let havePermission = false;
+    havePermission = await chrome.permissions.contains(webNavigationPerm);
+    if (!havePermission) {
+      await iosAlert(
+        "Permission was denied by you, but it is required to redirect back to the extension"
+      );
+      return;
+    }
+    permGranted = true;
+  }
+  // if hash is #plex-oauth or #simkl-oauth
+  if (loginType == "plex") {
+    // this won't request new pin and code this time
+    startPlexOauth();
   } else {
     // request service worker to validate and save oauth tokens
     checkPlexAuthTokenValidity();
   }
-  if (window.location.hash == "#simkl-oauth") {
+  if (loginType == "simkl") {
     startSimklOauth();
-    // remove #simkl-oauth from url to be safe
-    removeWindowHash();
   } else {
     // request service worker to validate and save oauth tokens
     checkSimklAuthTokenValidity();
+  }
+  if (permGranted) {
+    if (chromeTabsUpdateBugVerCheck()) {
+      let t = await chrome.tabs.getCurrent();
+      console.debug("Chrome tabs update bug is applicable: closing tab", t);
+      await chrome.tabs.remove(t.id);
+    }
   }
 };
 
@@ -118,7 +146,7 @@ const requestPlexURIPermissions = async (plexUrl) => {
   return true;
 };
 
-const requestRedirectInterceptPermissions = async () => {
+const requestRedirectInterceptPermissions = async (loginType = "simkl") => {
   let webNavigationPerm = {
     permissions: ["webNavigation"],
   };
@@ -126,21 +154,38 @@ const requestRedirectInterceptPermissions = async () => {
   havePermission = await chrome.permissions.contains(webNavigationPerm);
   if (!havePermission) {
     // request permission
-    alert(
+    await iosAlert(
       "Chrome will request for reading your browser history. Don't worry we need it to only to reopen extension after authentication"
     );
     havePermission = await chrome.permissions.request(webNavigationPerm);
     console.debug("Allowed?", havePermission);
+    if (inPopup()) {
+      // check if in popup and open new tab and resume flow
+      // Due to a bug in chrome: after permission is requested popup closes
+      // https://bugs.chromium.org/p/chromium/issues/detail?id=952645
+      let message = {
+        method: CallType.bg.popupAfterPermissionPrompt,
+        type: CallType.call,
+        loginType: loginType, // plex|simkl
+      };
+      await chrome.runtime.sendMessage(message);
+    }
   }
   if (!havePermission) {
-    alert("Permission was denied by you, it is required to redirect back to the extension");
-    return;
+    await iosAlert(
+      "Permission was denied by you, but it is required to redirect back to the extension"
+    );
+    // TODO: if [chrome.webRequest](https://developer.chrome.com/docs/extensions/reference/webRequest/#event-onBeforeRedirect)
+    // can be used, use it or here we need to handle the redirect differently
+    // shouldn't use http://chrome_ext_id
+    return false;
   }
   let message = {
     method: CallType.bg.addInterceptListeners,
     type: CallType.call,
   };
   await chrome.runtime.sendMessage(message);
+  return true;
 };
 
 const uiSyncEnabled = () => {
@@ -240,20 +285,19 @@ const onLoad = async () => {
     });
     console.debug(`plexOauthToken is: ${plexOauthToken}`);
     if (!plexOauthToken) {
-      await requestRedirectInterceptPermissions();
+      if (!(await requestRedirectInterceptPermissions("plex"))) return;
       startPlexOauth();
     } else {
       logoutPlex();
     }
   });
   simklBtn.addEventListener("click", async (_) => {
-    await requestRedirectInterceptPermissions();
     let { simklOauthToken } = await chrome.storage.sync.get({
       simklOauthToken: null,
     });
     console.debug(`simklOauthToken is: ${simklOauthToken}`);
-    // console.debug(e);
     if (!simklOauthToken) {
+      if (!(await requestRedirectInterceptPermissions("simkl"))) return;
       startSimklOauth();
     } else {
       logoutSimkl();
@@ -302,7 +346,7 @@ const onLoad = async () => {
     }
   });
 
-  handleLogins();
+  handleHashRoutes();
   // load settings from local storage and update UI
   (async () => {
     let { plexInstanceUrl, syncPeriod } = await chrome.storage.local.get({

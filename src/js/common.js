@@ -94,6 +94,7 @@ const CallType = {
   },
   bg: {
     addInterceptListeners: "",
+    popupAfterPermissionPrompt: "",
   },
 };
 

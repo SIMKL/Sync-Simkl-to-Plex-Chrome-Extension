@@ -93,7 +93,9 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       chrome.tabs.create({ url: appAuthorizeUrl });
     } else {
       // open url in same tab
-      chrome.tabs.update({ url: appAuthorizeUrl });
+      chrome.tabs.update({ url: appAuthorizeUrl }, () => {
+        chrome.runtime.lastError && console.error(chrome.runtime.lastError);
+      });
     }
     return true;
   };

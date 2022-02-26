@@ -252,7 +252,9 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       chrome.tabs.create({ url: oauthUrl });
     } else {
       // open url in same tab
-      chrome.tabs.update({ url: oauthUrl });
+      chrome.tabs.update({ url: oauthUrl }, () => {
+        chrome.runtime.lastError && console.error(chrome.runtime.lastError);
+      });
     }
     return true;
   };

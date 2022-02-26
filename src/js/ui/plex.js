@@ -32,9 +32,7 @@ const startPlexOauth = () => {
     {
       type: CallType.call,
       method: CallType.oauth.plex.oauthStart,
-      inPopup:
-        // https://stackoverflow.com/a/8921196
-        chrome.extension.getViews({ type: "popup" })[0] !== undefined,
+      inPopup: inPopup(),
     },
     (response) => {
       let message = {

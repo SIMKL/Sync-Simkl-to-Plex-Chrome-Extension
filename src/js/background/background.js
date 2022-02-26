@@ -119,6 +119,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         case CallType.bg.addInterceptListeners:
           addInterceptListeners();
           return true;
+        case CallType.bg.popupAfterPermissionPrompt:
+          chrome.tabs.create({
+            url: chrome.runtime.getURL(
+              `popup.html#${message.loginType}-perm`
+            ),
+          });
+          return true;
 
         // API methods
         case CallType.apis.plex.getBgUrl:
@@ -166,7 +173,7 @@ const handleOauthIntercepts = () => {
       });
       let parts = url.split("?");
       let simklPinCode = parts[parts.length - 1].split("=")[1];
-      console.debug(`got pincode for simkl: ${simklPinCode}`);
+      console.debug(`Got pincode for simkl: ${simklPinCode}`);
       chrome.storage.local.set({
         simklPinCode: simklPinCode,
       });
