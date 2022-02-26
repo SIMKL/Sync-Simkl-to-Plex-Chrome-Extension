@@ -54,26 +54,26 @@ const handleHashRoutes = async () => {
   if (windowHash == "") windowHash = "#"; // so that next line will result in ""
   // remove #plex-oauth or #simkl-oauth from url to be safe
   // remove #plex-perm or #simkl-perm from url to be safe
-  if (windowHash.startsWith("plex-") || windowHash.startsWith("simkl-"))
+  if (windowHash.startsWith("#plex-") || windowHash.startsWith("#simkl-"))
     removeWindowHash();
 
   let loginType = windowHash.split("-")[0].split("#")[1];
-  let permGranted = false;
-  // #plex-perm or #simkl-perm
-  if (windowHash.endsWith("perm")) {
-    let webNavigationPerm = {
-      permissions: ["webNavigation"],
+  let permPromptFollowup = false;
+  // #plexurl-perm
+  if (windowHash == "#plexurl-perm") {
+    permPromptFollowup = true;
+    removeWindowHash();
+    let parts = window.location.href.split("?");
+    let plexUrl = decodeURIComponent(parts[parts.length - 1].split("=")[1]);
+    let originPerm = {
+      origins: [plexUrl.originUrl()],
     };
     let havePermission = false;
-    havePermission = await chrome.permissions.contains(webNavigationPerm);
+    havePermission = await chrome.permissions.contains(originPerm);
     if (!havePermission) {
-      await iosAlert(
-        window.SimklPlexLangStrs.strings.hist_perm_denied_message,
-        window.SimklPlexLangStrs.strings.hist_perm_denied
-      );
+      await iosAlert(`Access for: ${plexUrl} denined by you, it is required.`);
       return;
     }
-    permGranted = true;
   }
   // if hash is #plex-oauth or #simkl-oauth
   if (loginType == "plex") {
@@ -89,12 +89,13 @@ const handleHashRoutes = async () => {
     // request service worker to validate and save oauth tokens
     checkSimklAuthTokenValidity();
   }
-  if (permGranted) {
-    if (chromeTabsUpdateBugVerCheck()) {
-      let t = await chrome.tabs.getCurrent();
-      console.debug("Chrome tabs update bug is applicable: closing tab", t);
-      await chrome.tabs.remove(t.id);
-    }
+  if (permPromptFollowup) {
+    // not required as not using chrome.tabs.update here
+    // if (chromeTabsUpdateBugVerCheck()) {
+    //   let t = await chrome.tabs.getCurrent();
+    //   console.debug("Chrome tabs update bug is applicable: closing tab", t);
+    //   await chrome.tabs.remove(t.id);
+    // }
   }
 };
 
@@ -117,74 +118,34 @@ const requestPlexURIPermissions = async (plexUrl) => {
       allowed = await chrome.permissions.request({
         origins: [plexUrl.originUrl()],
       });
+      console.debug("Allowed?", allowed);
     } catch (error) {
-      alert(`Invalid Url: ${plexUrl}\n${error}`);
+      await iosAlert(`Invalid Url: ${plexUrl}\n${error}`);
     }
     if (!allowed) {
-      alert(`Access for: ${plexUrl} denined by you, it is required.`);
+      if (inPopup()) {
+        // check if in popup and open new tab and resume flow
+        // Due to a bug in chrome: after permission is requested popup closes
+        // https://crbug.com/952645
+        let message = {
+          method: CallType.bg.popupAfterPermissionPrompt,
+          type: CallType.call,
+          // TODO: refactor all hash routes in to a common.js enum
+          hashRoute: "plexurl-perm",
+          plexUrl: encodeURIComponent(plexUrl),
+        };
+        await chrome.runtime.sendMessage(message);
+      } else {
+        await iosAlert(
+          `Access for: ${plexUrl} denined by you, it is required.`
+        );
+      }
       return false;
     } else {
       allowedOrigins.push(plexUrl.originUrl());
       chrome.storage.local.set({ allowedOrigins });
     }
   }
-  chrome.declarativeNetRequest.updateDynamicRules({
-    addRules: [
-      {
-        id: 1,
-        priority: 1,
-        action: {
-          type: "allowAllRequests",
-        },
-        condition: {
-          urlFilter: "|http*",
-          resourceTypes: ["main_frame"],
-        },
-      },
-    ],
-    removeRuleIds: [1],
-  });
-  return true;
-};
-
-const requestRedirectInterceptPermissions = async (loginType = "simkl") => {
-  let webNavigationPerm = {
-    permissions: ["webNavigation"],
-  };
-  let havePermission = false;
-  havePermission = await chrome.permissions.contains(webNavigationPerm);
-  if (!havePermission) {
-    // request permission
-    await iosAlert(window.SimklPlexLangStrs.strings.hist_perm_describe);
-    havePermission = await chrome.permissions.request(webNavigationPerm);
-    console.debug("Allowed?", havePermission);
-    if (inPopup()) {
-      // check if in popup and open new tab and resume flow
-      // Due to a bug in chrome: after permission is requested popup closes
-      // https://bugs.chromium.org/p/chromium/issues/detail?id=952645
-      let message = {
-        method: CallType.bg.popupAfterPermissionPrompt,
-        type: CallType.call,
-        loginType: loginType, // plex|simkl
-      };
-      await chrome.runtime.sendMessage(message);
-    }
-  }
-  if (!havePermission) {
-    await iosAlert(
-      window.SimklPlexLangStrs.strings.hist_perm_denied_message,
-      window.SimklPlexLangStrs.strings.hist_perm_denied
-    );
-    // TODO: if [chrome.webRequest](https://developer.chrome.com/docs/extensions/reference/webRequest/#event-onBeforeRedirect)
-    // can be used, use it or here we need to handle the redirect differently
-    // shouldn't use http://chrome_ext_id
-    return false;
-  }
-  let message = {
-    method: CallType.bg.addInterceptListeners,
-    type: CallType.call,
-  };
-  await chrome.runtime.sendMessage(message);
   return true;
 };
 
@@ -285,7 +246,6 @@ const onLoad = async () => {
     });
     console.debug(`plexOauthToken is: ${plexOauthToken}`);
     if (!plexOauthToken) {
-      if (!(await requestRedirectInterceptPermissions("plex"))) return;
       startPlexOauth();
     } else {
       logoutPlex();
@@ -297,7 +257,6 @@ const onLoad = async () => {
     });
     console.debug(`simklOauthToken is: ${simklOauthToken}`);
     if (!simklOauthToken) {
-      if (!(await requestRedirectInterceptPermissions("simkl"))) return;
       startSimklOauth();
     } else {
       logoutSimkl();
@@ -407,12 +366,18 @@ chrome.runtime.onMessage.addListener((message, sender) => {
           break;
         case ActionType.ui.sync.plex.offline:
           document.body.classList.add("error-plex-url-offline");
+          uiSyncDisabled();
+          stopLibrarySync();
           break;
         case ActionType.ui.sync.simkl.online:
           document.body.classList.remove("error-simkl-url-offline");
           break;
-        case ActionType.ui.sync.simkl.offline:
+          case ActionType.ui.sync.simkl.offline:
+          // TODO: max retries for offline?
+          // better disable sync if offline immediately
           document.body.classList.add("error-simkl-url-offline");
+          uiSyncDisabled();
+          stopLibrarySync();
           break;
         case ActionType.ui.sync.plex.connecting:
           document.body.classList.add("sync-connecting-to-plex");

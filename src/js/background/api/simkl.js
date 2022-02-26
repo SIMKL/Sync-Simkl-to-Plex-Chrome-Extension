@@ -33,6 +33,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       redirect_uri: SimklRedirectURI,
       grant_type: "authorization_code",
     };
+    // TODO: API error handling
     return await (
       await fetch("https://api.simkl.com/oauth/token", {
         method: "POST",
@@ -93,7 +94,10 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       chrome.tabs.create({ url: appAuthorizeUrl });
     } else {
       // open url in same tab
+      // BUGLOC: chromeTabsUpdateBugVerCheck happens here
       chrome.tabs.update({ url: appAuthorizeUrl }, () => {
+        // this debugging step printed nothing when chromeTabsUpdateBugVerCheck
+        // bug was happening (when reaching this point)
         chrome.runtime.lastError && console.error(chrome.runtime.lastError);
       });
     }
@@ -175,6 +179,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   const getLastActivity = async (token, responseChannel = null) => {
+    // TODO: API error handling
     let resp = await fetch("https://api.simkl.com/sync/activities", {
       headers: {
         "Content-Type": "application/json",
@@ -193,6 +198,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   const getUserInfo = async (token) => {
+    // TODO: API error handling
     let resp = await fetch("https://api.simkl.com/users/settings", {
       headers: {
         "Content-Type": "application/json",

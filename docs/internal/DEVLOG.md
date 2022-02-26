@@ -193,7 +193,7 @@ This document describes the development workflow that went into this project.
       - The proper solution for this is to simply do this in simkl backend and download the file.
         - But keeping this as a last resort and I will try implementing it completely on the client side.
         - Doing it in client side will have a lot for pros.
-          - No need for handling an extra 
+          - No need for handling an extra
           - progress updates can be shown very easily.
         - But that can't be done by me (@phanirithvij).
       - Looked at the file formats which support this. From this [so](https://stackoverflow.com/a/8859822) post only 7z works.
@@ -201,7 +201,56 @@ This document describes the development workflow that went into this project.
         - Lzma will also work, i.e. xz. But xz has no concept for multiple files, so first we must .tar
           - Found js lib for tar tarball.js gh repo.
         - Tried looking at wasm to get xz format working on the web. But it isn't possible because of webm-unsafe-eval CSP not rolled out (only in canary) for manifest v3
-        - Wasm is not allowed
+        - Wasm is not allowed in manifest v3 as of today. https://crbug.com/1173354
+
+#### `26/2/2022`
+
+- `@phanirithvij`
+  - Added ios styled alert box logic following simkl.com (css) and a codepen (js).
+  - Workaround for an extreme chromium bug.
+    - Found out that when ext popup is open after we prompt for any permissions, after the permission prompt is closed the popup will be closed. https://crbug.com/952645
+    - And as we are requesting webNavigation permission, I added permission handling flow.
+      - If in a popup when requesting permissions we know for a fact popup closes after prompt closes
+      - So open a specific route in a new tab depending on the login type i.e. `/popup.html#{plex,simkl}-perm`
+      - When resolving hash routes on document load, if it is `#*-perm` handle it.
+        - First remove window hash
+        - check if permission granted and show alert if not.
+        - if permission granted (`webNavigation`) then add intercept listeners.
+        - auto handle oauth based on hash route's login type.
+      - In this flow, on Brave browser (which I was using), when handling the oauth, in background `simkl.js` and `plex.js` the `chrome.tabs.update` is working as `chrome.tabs.create`.
+      - Tried passing `tabId` and debugging but it could still be reproduced.
+      - I assumed it was an issue with Brave browser specifically so tried testing the extension on google chrome, I had google chrome beta installed.
+      - It (`chrome.tabs.update`) worked properly as intended when using chrome.
+      - Added brave browser detection js logic to client and closed the extra opened tab if we are using brave.
+      - But I installed google chrome stable version to test just to be sure.
+      - Unexpectedly it was not a brave specific issue but chromium issue as it could be reproduced.
+      - So searched a lot online regarding this bug to no avail and went to chrome release channels and refs (tags). Found the beta version (99.0.4844.45 (latest beta)) and 98.0.4758.102 (latest stable) and tried grepping the tag diff log for `tabs/update` but to no avail.
+      - So started binary search for the version manually.
+        - Download a specific chromium version.
+        - Go through the steps of installing the extension (load unpacked) and reproducing the bug
+        - if found update the lower bound to this version
+        - if bug not found update the upper bound to this version
+        - go to roughly the middle version
+      - Finally after 2 hours found the version where the bug was fixed
+        `99.0.4783.0` - works
+        `99.0.4782.1` - doesn't work
+        `98.0.4758.103+` - no downloads available
+        `98.0.4758.102` - Does not work
+      - Went through the diff of release tag commit log for these two beta versions (82.1 and 83.0) but found no commit describing this bug fix.
+      - Can use string compare to compare installed version and this version to determine if the bug is applicable and handle it accordingly (as chrome follows semvers)
+      - Handled it.
+  - Added en-US strings for any strings which might be used via js.
+    - `js/ui/language/{en-us,main}.js`
+    - Refactored popup.js a bit.
+  - Tried working with `chrome.webRequest.onBeforeRequest` again.
+    - It was trivial if we ignore `webRequestBlocking` permission and use `chrome.tabs.update`.
+  - As `webRequest` logic was working removed `webNavigation` logic and another unrelated obsolete `declarativeNetRequest` logic.
+    - But after this permission flow was removed entirely.
+    - With the removal of permission flow logic, the above manual work of finding the buggy chromium version barrier went down the drain.
+    - Removed all of the chromium bug logic. (just version check)
+    - Now en-us.js is not needed as only permission alert strings were hardcoded. Every other string is from en-us.css.
+    - Removed en-us.js code.
+    - Alert is being used for handling `origin` permission request flow for each plex url input by the user.
 
 #### Notes (`@phanirithvij`)
 

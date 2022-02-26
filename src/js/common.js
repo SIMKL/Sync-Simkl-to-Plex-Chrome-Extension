@@ -96,7 +96,6 @@ const CallType = {
     },
   },
   bg: {
-    addInterceptListeners: "",
     popupAfterPermissionPrompt: "",
   },
 };
@@ -138,6 +137,7 @@ const MediaType = {
   shows: "",
 };
 
+// TODO: refactor all chrome.storage.{local,sync} key names here
 const StorageKeys = {
   setBrowserInfo: "",
 };

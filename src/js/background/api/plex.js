@@ -189,13 +189,13 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     const authAppUrl =
       "https://app.plex.tv/auth#?" +
       stringify({
-        forwardUrl: PlexRedirectURI,
         clientID: PlexClientID,
         code: plexPINcode,
         "context[device][product]": PlexClientName,
-        // We can't have a forwardURL to a chrome extension
-        // so using webNavigation api to intercept http://<chrome_ext_id>
+        // We can't have a forwardURL with a chrome-extension:// scheme
+        // so using webRequest api to intercept http://<chrome_ext_id>
         // and using that as the forwardUrl
+        forwardUrl: PlexRedirectURI,
       });
     return authAppUrl;
   };

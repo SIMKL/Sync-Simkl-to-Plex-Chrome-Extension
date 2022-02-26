@@ -116,13 +116,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           return true;
 
         // bg handlers
-        case CallType.bg.addInterceptListeners:
-          addInterceptListeners();
-          return true;
         case CallType.bg.popupAfterPermissionPrompt:
           chrome.tabs.create({
             url: chrome.runtime.getURL(
-              `popup.html#${message.loginType}-perm`
+              `popup.html?url=${message.plexUrl}#${message.hashRoute}`
             ),
           });
           return true;
@@ -161,42 +158,36 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 // Intercept and redirect to chrome-extension://
 
-const handleOauthIntercepts = () => {
-  return ({ tabId, url }) => {
-    if (url == PlexRedirectURI) {
-      chrome.tabs.update(tabId, {
-        url: chrome.runtime.getURL("/popup.html#plex-oauth"),
-      });
-    } else if (url.startsWith(SimklRedirectURI)) {
-      chrome.tabs.update(tabId, {
-        url: chrome.runtime.getURL("/popup.html#simkl-oauth"),
-      });
-      let parts = url.split("?");
-      let simklPinCode = parts[parts.length - 1].split("=")[1];
-      console.debug(`Got pincode for simkl: ${simklPinCode}`);
-      chrome.storage.local.set({
-        simklPinCode: simklPinCode,
-      });
-    }
-  };
+const handleOauthIntercepts = async ({ tabId, url }) => {
+  if (url == PlexRedirectURI) {
+    chrome.tabs.update(tabId, {
+      url: chrome.runtime.getURL("/popup.html#plex-oauth"),
+    });
+  } else if (url.startsWith(SimklRedirectURI)) {
+    await chrome.tabs.update(tabId, {
+      url: chrome.runtime.getURL("/popup.html#simkl-oauth"),
+    });
+    // FIXME: instead of reloading the tab chrome.runtime.sendMessage can be used
+    await chrome.tabs.reload(tabId);
+    let parts = url.split("?");
+    let simklPinCode = parts[parts.length - 1].split("=")[1];
+    console.debug(`Got pincode for simkl: ${simklPinCode}`);
+    chrome.storage.local.set({
+      simklPinCode: simklPinCode,
+    });
+  }
 };
 
-const addInterceptListeners = () => {
-  console.debug("Adding intercept listeners...");
-  // This had to be done because declarativeNetRequest is not working
-  // in combination with server redirect (explained in devlog.md/4-2-22)
-
-  // also capture errors because for plex ?code= is making onBeforeNavigate take way too long
-  chrome.webNavigation.onErrorOccurred.addListener(handleOauthIntercepts(), {
-    url: [{ urlPrefix: HttpCrxRedirectStub }],
-  });
-
-  chrome.webNavigation.onBeforeNavigate.addListener(handleOauthIntercepts(), {
-    url: [{ urlPrefix: HttpCrxRedirectStub }],
-  });
-
-  chrome.storage.local.set({ registerdInterceptListeners: true });
-};
+chrome.webRequest.onBeforeRequest.addListener(
+  (details) => {
+    console.debug("On Before request");
+    console.debug(details);
+    handleOauthIntercepts(details);
+  },
+  {
+    urls: [`${HttpCrxRedirectStub}/*`],
+  }
+);
 
 // Extension on install register
 {
@@ -214,8 +205,6 @@ const addInterceptListeners = () => {
     chrome.tabs.create({
       url: chrome.runtime.getURL(`popup.html#fresh-install`),
     });
-    // clear some storage properties
-    // chrome.storage.local.set({ registerdInterceptListeners: null });
   });
 
   chrome.runtime.setUninstallURL(UNINSTALL_URL);

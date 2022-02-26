@@ -12,11 +12,8 @@
     "host_permissions": [
         "*://*/*"
     ],
-    "optional_permissions": [
-        "webNavigation"
-    ],
     "permissions": [
-        "declarativeNetRequest",
+        "webRequest",
         "alarms",
         "storage"
     ]

@@ -111,10 +111,6 @@ const iosAlert = async function () {
   });
 };
 
-// unused, ignore this
-const isBraveBrowser = async () =>
-  (navigator.brave && (await navigator.brave.isBrave())) || false;
-
 const getChromeVersion = () => {
   // https://stackoverflow.com/a/47454708
   var pieces = navigator.userAgent.match(
@@ -138,6 +134,15 @@ let _ver = getChromeVersion();
 const BrowserVersion = `${_ver.major}.${_ver.minor}`;
 const BrowserVersionFull = _ver.fullStr;
 const OSName = navigator.userAgentData.platform;
+// https://stackoverflow.com/a/25603630
+const OSLanguage = navigator.languages
+  ? navigator.languages[0]
+  : navigator.language
+  ? navigator.language
+  : navigator.userLanguage
+  ? navigator.userLanguage
+  : "en-US";
+const OSLanguageStripped = OSLanguage.split("-")[0];
 
 const setBrowserInfo = () => {
   chrome.storage.local.set(
