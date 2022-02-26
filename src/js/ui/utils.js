@@ -44,7 +44,7 @@ const inPopup = () => {
   // know if the current view is a popup or a full tab
   // https://stackoverflow.com/a/8921196
   let win = chrome.extension.getViews({
-    type: chrome.tabs.WindowType.POPUP, // "popup"
+    type: chrome.tabs.WindowType.POPUP, // popup
   })[0];
   return win !== undefined && win == window;
 };
@@ -138,14 +138,6 @@ let _ver = getChromeVersion();
 const BrowserVersion = `${_ver.major}.${_ver.minor}`;
 const BrowserVersionFull = _ver.fullStr;
 const OSName = navigator.userAgentData.platform;
-// https://stackoverflow.com/a/25603630
-const OSLanguage = navigator.languages
-  ? navigator.languages[1]
-  : navigator.language
-  ? navigator.language.split("-")[0]
-  : navigator.userLanguage
-  ? navigator.userLanguage.split("-")[0]
-  : "en";
 
 const setBrowserInfo = () => {
   chrome.storage.local.set(

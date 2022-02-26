@@ -1,3 +1,7 @@
+#Alert button {
+    cursor: pointer;
+}
+
 /*!START ALERT*/
 #Alert .alert-title {
     line-height: 140%;

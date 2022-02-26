@@ -23,7 +23,7 @@ importScripts("../vendor/txml@5.1.1.min.js");
 // importScripts("../vendor/lzma-min@2.3.2.js");
 // https://www.npmjs.com/package/file-saver/v/2.0.5
 // https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js
-importScripts("../vendor/FileSaver@2.0.5.min.js");
+// importScripts("../vendor/FileSaver@2.0.5.min.js");
 
 // Global state
 
@@ -217,10 +217,6 @@ const addInterceptListeners = () => {
     // clear some storage properties
     // chrome.storage.local.set({ registerdInterceptListeners: null });
   });
-
-  // TODO: change this to the feedback url once done
-  const UNINSTALL_URL =
-    "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
 
   chrome.runtime.setUninstallURL(UNINSTALL_URL);
 }

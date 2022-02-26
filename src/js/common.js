@@ -1,6 +1,9 @@
 // Consts
 
 const DefaultSyncPeriod = 12;
+// TODO: change this to the feedback url once done
+const UNINSTALL_URL =
+  "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
 
 // Utils
 
@@ -135,9 +138,14 @@ const MediaType = {
   shows: "",
 };
 
+const StorageKeys = {
+  setBrowserInfo: "",
+};
+
 CallType.enumify();
 ActionType.enumify();
 MediaType.enumify();
+StorageKeys.enumify();
 
 // Not using these elsewhere so clean them up
 delete Object.prototype.nestedIndex;

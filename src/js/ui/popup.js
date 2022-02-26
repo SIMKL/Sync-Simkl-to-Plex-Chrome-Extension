@@ -68,7 +68,8 @@ const handleHashRoutes = async () => {
     havePermission = await chrome.permissions.contains(webNavigationPerm);
     if (!havePermission) {
       await iosAlert(
-        "Permission was denied by you, but it is required to redirect back to the extension"
+        window.SimklPlexLangStrs.strings.hist_perm_denied_message,
+        window.SimklPlexLangStrs.strings.hist_perm_denied
       );
       return;
     }
@@ -154,9 +155,7 @@ const requestRedirectInterceptPermissions = async (loginType = "simkl") => {
   havePermission = await chrome.permissions.contains(webNavigationPerm);
   if (!havePermission) {
     // request permission
-    await iosAlert(
-      "Chrome will request for reading your browser history. Don't worry we need it to only to reopen extension after authentication"
-    );
+    await iosAlert(window.SimklPlexLangStrs.strings.hist_perm_describe);
     havePermission = await chrome.permissions.request(webNavigationPerm);
     console.debug("Allowed?", havePermission);
     if (inPopup()) {
@@ -173,7 +172,8 @@ const requestRedirectInterceptPermissions = async (loginType = "simkl") => {
   }
   if (!havePermission) {
     await iosAlert(
-      "Permission was denied by you, but it is required to redirect back to the extension"
+      window.SimklPlexLangStrs.strings.hist_perm_denied_message,
+      window.SimklPlexLangStrs.strings.hist_perm_denied
     );
     // TODO: if [chrome.webRequest](https://developer.chrome.com/docs/extensions/reference/webRequest/#event-onBeforeRedirect)
     // can be used, use it or here we need to handle the redirect differently
