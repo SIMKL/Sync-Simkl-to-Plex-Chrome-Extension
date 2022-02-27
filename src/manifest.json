@@ -9,9 +9,6 @@
     "action": {
         "default_title": "Simkl>Plex"
     },
-    "host_permissions": [
-        "*://*/*"
-    ],
     "permissions": [
         "webRequest",
         "alarms",
