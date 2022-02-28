@@ -64,19 +64,22 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       }
     }
     try {
+      const ac = new AbortController();
+      // 5 second timeout:
+      const timeoutId = setTimeout(() => ac.abort(), 5000);
       let resp = await fetch(
         "https://plex.tv/api/v2/user?" +
           stringifyPlex({
             "X-Plex-Token": token,
           }),
         {
+          signal: ac.signal,
           headers: {
             accept: "application/json",
-            // if using body instead of query params plex requires
-            // content-type: application/x-www-form-urlencoded
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       let data = {};
       try {

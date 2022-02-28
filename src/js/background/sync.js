@@ -8,9 +8,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 class UIEvents {
-  // TODO: <BUG> the Js ui is not updating
-  // after these events fire, check why
-  // Found it was due to css issues
   static tokenExpired = (api = "plex") => {
     UIEvents.connectDone(api);
     chrome.runtime.sendMessage({
@@ -282,14 +279,11 @@ const startBgSync = async (signal) => {
               continue;
             }
             let mPlexids = simklIdsToPlexIds(movie.movie, mediaType);
-            let plexMovie = mPlexids
-              .map((id) => {
-                guidLut[id];
-              })
-              .filter((m) => m);
+            console.debug(mPlexids);
+            let plexMovie = mPlexids.map((id) => guidLut[id]).filter((m) => m);
             if (plexMovie.length > 0) {
               console.debug("Movie was found in plex library", plexMovie);
-              return;
+              // return;
               // continue;
             } else {
               // console.debug(
@@ -350,16 +344,16 @@ const startBgSync = async (signal) => {
           // TODO: handle anime differently, skip for now
           // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
           // as a reference
-          let tvdbSlugsS = [];
+          // let tvdbSlugsS = [];
           for (let anime of simklChanges[mediaType]) {
             if (!anime.show.ids) {
               console.debug("Show has no ids", anime);
               continue;
             }
-            let keys = Object.keys(anime.show.ids);
-            if (keys.includes("tvdbslug") && !keys.includes("tvdb")) {
-              tvdbSlugsS.push(anime.show.ids);
-            }
+            // let keys = Object.keys(anime.show.ids);
+            // if (keys.includes("tvdbslug") && !keys.includes("tvdb")) {
+            //   tvdbSlugsS.push(anime.show.ids);
+            // }
             switch (anime.status) {
               case "completed":
                 break;
@@ -375,7 +369,7 @@ const startBgSync = async (signal) => {
                 break;
             }
           }
-          console.log(tvdbSlugsS);
+          // console.log(tvdbSlugsS);
           break;
         default:
           break;

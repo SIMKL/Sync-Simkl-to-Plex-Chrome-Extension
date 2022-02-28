@@ -68,7 +68,7 @@ const finishPlexOauth = (message) => {
 const checkPlexAuthTokenValidity = () => {
   // Gets plexOauthToken from chrome.storage.sync
   // Checks whether it's valid and request user to login again if not
-
+  console.debug("Check plex auth token validity");
   // Note: broadcasting to other connected views is not needed for this
   chrome.runtime.sendMessage(
     {
@@ -76,6 +76,7 @@ const checkPlexAuthTokenValidity = () => {
       method: CallType.oauth.plex.checkTokenValiditiy,
     },
     (response) => {
+      console.debug("plexOauthvalidity: got response", response);
       const { authToken, valid } = response;
       if (valid) {
         // set plex button ui accordingly

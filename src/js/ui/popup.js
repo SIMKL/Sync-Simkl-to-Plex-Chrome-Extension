@@ -1,11 +1,16 @@
-const restartLibrarySync = async (durationHours = DefaultSyncPeriod) => {
+const restartLibrarySync = async (
+  durationHours = DefaultSyncPeriod,
+  runImmediately = true
+) => {
   if (!durationHours) {
     durationHours = DefaultSyncPeriod;
   }
   if (await isSyncEnabled()) stopLibrarySync();
   console.debug("Starting library sync, duration", durationHours, "hrs");
   chrome.alarms.create(AlarmKey, {
-    when: Date.now() + 100, // start immediately
+    when: runImmediately
+      ? Date.now() + 100
+      : Date.now() + durationHours * 60 * 60 * 1000, // start immediately
     periodInMinutes: durationHours * 60,
     // periodInMinutes: 0.1,
   });
@@ -302,6 +307,15 @@ const onLoad = async () => {
     "input",
     debounce(() => validateInputUrl(urlInput.value))
   );
+  durationInput.addEventListener("change", async (_) => {
+    chrome.storage.local.set({
+      syncPeriod: durationInput.value,
+    });
+    if (await isSyncEnabled()) {
+      restartLibrarySync(durationInput.value, false);
+      startNextSyncTimer();
+    }
+  });
   syncBtn.addEventListener("click", async (_) => {
     if (
       document.body.classList.contains("connected-plex") &&
@@ -367,7 +381,7 @@ const onLoad = async () => {
     if (await isSyncEnabled()) {
       uiSyncEnabled();
       // next sync timer
-      handleNextSyncTimer();
+      startNextSyncTimer();
     }
   })();
 
@@ -480,10 +494,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
           setCssVar("--plex-items-count", 0);
           document.body.classList.remove("sync-in-progress-plex");
           document.body.classList.add("sync-waiting-for-next-sync");
-          let { syncPeriod } = await chrome.storage.local.get({
-            syncPeriod: DefaultSyncPeriod,
-          });
-          setCssVar("--plex-timer", `"${syncPeriod}:00:00"`);
+          startNextSyncTimer();
           break;
         default:
           console.debug("Unknown action", message);
@@ -500,7 +511,14 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
   return true;
 });
 
-const handleNextSyncTimer = async () => {
+const startNextSyncTimer = async () => {
+  let signal = null;
+  if (!!window.timerAbortC) {
+    window.timerAbortC.abort();
+    window.timerAbortC = null;
+  }
+  window.timerAbortC = new AbortController();
+  signal = window.timerAbortC.signal;
   let { lastSynced, syncPeriod } = await chrome.storage.local.get({
     lastSynced: null,
     syncPeriod: DefaultSyncPeriod,
@@ -519,7 +537,7 @@ const handleNextSyncTimer = async () => {
     let interval = setInterval(() => {
       totSecs--;
       setCssVar("--plex-timer", `"${msToHMS(remainingMS())}"`);
-      if (totSecs === 0) {
+      if (totSecs === 0 || (!!signal && signal.aborted)) {
         clearInterval(interval);
       }
     }, 1000);

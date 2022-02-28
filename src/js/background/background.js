@@ -115,7 +115,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           startBgSync(aController.signal);
           return true;
         case CallType.bg.sync.stop:
-          self.aController.abort();
+          !!self.aController && self.aController.abort();
           return true;
 
         // API methods
