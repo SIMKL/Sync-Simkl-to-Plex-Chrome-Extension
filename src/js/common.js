@@ -1,7 +1,8 @@
 // Consts
 
 const DefaultSyncPeriod = 12;
-// TODO: change this to the feedback url once done
+const AlarmKey = "plex-libray-sync";
+// TODO: Simkl uninstall feedback url
 const UNINSTALL_URL =
   "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
 
@@ -14,6 +15,8 @@ const stringify = (json) => {
     })
     .join("&");
 };
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Enums
 
@@ -96,6 +99,10 @@ const CallType = {
     },
   },
   bg: {
+    sync: {
+      start: "",
+      stop: "",
+    },
     popupAfterPermissionPrompt: "",
   },
 };
@@ -127,6 +134,8 @@ const ActionType = {
         sessionexpired: "",
       },
       progress: "",
+      finished: "",
+      failed: "",
     },
   },
 };

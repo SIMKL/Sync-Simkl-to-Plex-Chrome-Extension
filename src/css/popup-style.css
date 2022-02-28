@@ -63,10 +63,10 @@ sync,sync * {
 	body:not(.sync-enabled) sync-desc-line-1::before {
 		content: var(--text-desc);
 	}
-	.sync-connecting-to-simkl:not(.sync-enabled) sync-desc-line-1::before {
+	.sync-connecting-to-simkl.sync-enabled sync-desc-line-1::before {
 		content: var(--text-desc-connecting-to-simkl);
 	}
-	.sync-connecting-to-plex:not(.sync-enabled) sync-desc-line-1::before {
+	.sync-connecting-to-plex.sync-enabled sync-desc-line-1::before {
 		content: var(--text-desc-connecting-to-url);
 	}
 	.connected-simkl.connected-plex:not(.sync-enabled) sync-desc-line-1::before {

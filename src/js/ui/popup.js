@@ -1,25 +1,30 @@
-const restartLibrarySync = async (durationHrs = DefaultSyncPeriod) => {
-  if (!durationHrs) {
-    durationHrs = DefaultSyncPeriod;
+const restartLibrarySync = async (durationHours = DefaultSyncPeriod) => {
+  if (!durationHours) {
+    durationHours = DefaultSyncPeriod;
   }
-  if (await isSyncRunning()) stopLibrarySync();
-  console.debug("Starting library sync, duration", durationHrs, "hrs");
-  chrome.alarms.create("plex-libray-sync", {
+  if (await isSyncEnabled()) stopLibrarySync();
+  console.debug("Starting library sync, duration", durationHours, "hrs");
+  chrome.alarms.create(AlarmKey, {
     when: Date.now() + 100, // start immediately
-    // periodInMinutes: durationHrs * 60,
-    periodInMinutes: 0.1,
+    periodInMinutes: durationHours * 60,
+    // periodInMinutes: 0.1,
   });
 };
 
 const stopLibrarySync = () => {
   console.debug("Stopping any running library sync");
-  chrome.alarms.clear("plex-libray-sync");
+  chrome.alarms.clear(AlarmKey);
+  let message = {
+    type: CallType.call,
+    method: CallType.bg.sync.stop,
+  };
+  chrome.runtime.sendMessage(message);
 };
 
 const startLibrarySync = restartLibrarySync;
 
-const isSyncRunning = async () => {
-  return !!(await chrome.alarms.get("plex-libray-sync"));
+const isSyncEnabled = async () => {
+  return !!(await chrome.alarms.get(AlarmKey));
 };
 
 const validateInputUrl = (inputUrl) => {
@@ -62,31 +67,37 @@ const handleHashRoutes = async () => {
   // #plexurl-perm
   if (windowHash == "#plexurl-perm") {
     permPromptFollowup = true;
-    removeWindowHash();
     let parts = window.location.href.split("?");
     let plexUrl = decodeURIComponent(parts[parts.length - 1].split("=")[1]);
-    let originPerm = {
-      origins: [plexUrl.originUrl()],
-    };
-    let havePermission = false;
-    havePermission = await chrome.permissions.contains(originPerm);
-    if (!havePermission) {
-      await iosAlert(`Access for: ${plexUrl} denined by you, it is required.`);
+    removeWindowHash();
+    removeWindowQueryParams();
+    // Here chrome.permissions.contains always returns true
+    // and is thus useless as we have *://* in host_permissions for the manifest
+    // So we are keeping it tracked ourselves
+    let { allowedOrigins } = await chrome.storage.local.get({
+      allowedOrigins: [],
+    });
+    console.debug("Allowed origins", allowedOrigins);
+    if (allowedOrigins.includes(plexUrl.originUrl())) {
       return;
     }
+    iosAlert(
+      `Access for: ${plexUrl} was denied by you but it is required for sync to work.`,
+      "Attention"
+    ); // no need to stall the UI here by using await
   }
   // if hash is #plex-oauth or #simkl-oauth
   if (loginType == "plex") {
     // this won't request new pin and code this time
     startPlexOauth();
   } else {
-    // request service worker to validate and save oauth tokens
+    // request service worker to validate and save plex oauth token
     checkPlexAuthTokenValidity();
   }
   if (loginType == "simkl") {
     startSimklOauth();
   } else {
-    // request service worker to validate and save oauth tokens
+    // request service worker to validate and save simkl oauth token
     checkSimklAuthTokenValidity();
   }
   if (permPromptFollowup) {
@@ -99,7 +110,20 @@ const handleHashRoutes = async () => {
   }
 };
 
+// Orgin permission handling
+
+const renewOrginPerms = async (oldPlexUrl, normalizedUrl) => {
+  if (oldPlexUrl.originUrl() != normalizedUrl.originUrl()) {
+    // url was modified while sync was running
+    // remove permissions for old url
+    console.debug(oldPlexUrl.originUrl(), normalizedUrl.originUrl());
+    await removePlexURIPermissions(oldPlexUrl);
+    await requestPlexURIPermissions(normalizedUrl);
+  }
+};
+
 const removePlexURIPermissions = async (plexUrl) => {
+  console.debug("Removing origin permissions for", plexUrl);
   let { allowedOrigins } = await chrome.storage.local.get({
     allowedOrigins: [],
   });
@@ -109,6 +133,7 @@ const removePlexURIPermissions = async (plexUrl) => {
 };
 
 const requestPlexURIPermissions = async (plexUrl) => {
+  // return true;
   let { allowedOrigins } = await chrome.storage.local.get({
     allowedOrigins: [],
   });
@@ -122,32 +147,41 @@ const requestPlexURIPermissions = async (plexUrl) => {
     } catch (error) {
       await iosAlert(`Invalid Url: ${plexUrl}\n${error}`);
     }
-    if (!allowed) {
-      if (inPopup()) {
-        // check if in popup and open new tab and resume flow
-        // Due to a bug in chrome: after permission is requested popup closes
-        // https://crbug.com/952645
-        let message = {
-          method: CallType.bg.popupAfterPermissionPrompt,
-          type: CallType.call,
-          // TODO: refactor all hash routes in to a common.js enum
-          hashRoute: "plexurl-perm",
-          plexUrl: encodeURIComponent(plexUrl),
-        };
-        await chrome.runtime.sendMessage(message);
+    if (inPopup()) {
+      // check if in popup and open new tab and resume flow
+      // Due to a bug in chrome: after permission is requested popup closes
+      // https://crbug.com/952645
+      let message = {
+        method: CallType.bg.popupAfterPermissionPrompt,
+        type: CallType.call,
+        // TODO: refactor all hash routes in to a common.js enum
+        hashRoute: "plexurl-perm",
+        plexUrl: encodeURIComponent(plexUrl),
+      };
+      chrome.runtime.sendMessage(message);
+      if (allowed) {
+        allowedOrigins.push(plexUrl.originUrl());
+        chrome.storage.local.set({ allowedOrigins });
+      } else {
+        return false;
+      }
+    } else {
+      if (allowed) {
+        allowedOrigins.push(plexUrl.originUrl());
+        chrome.storage.local.set({ allowedOrigins });
       } else {
         await iosAlert(
-          `Access for: ${plexUrl} denined by you, it is required.`
+          `Access for: ${plexUrl} was denied by you but it is required for sync to work.`,
+          "Attention"
         );
+        return false;
       }
-      return false;
-    } else {
-      allowedOrigins.push(plexUrl.originUrl());
-      chrome.storage.local.set({ allowedOrigins });
     }
   }
   return true;
 };
+
+// Sync UI
 
 const uiSyncEnabled = () => {
   document.body.classList.add("sync-enabled");
@@ -155,6 +189,7 @@ const uiSyncEnabled = () => {
 
 const uiSyncDisabled = () => {
   document.body.classList.remove("sync-enabled");
+  document.body.classList.remove("sync-waiting-for-next-sync");
 };
 
 const uiBroadcastSyncState = (enabled = true) => {
@@ -163,6 +198,12 @@ const uiBroadcastSyncState = (enabled = true) => {
     type: ActionType.action,
   };
   chrome.runtime.sendMessage(message);
+};
+
+const uiSetPopupViewState = () => {
+  if (inPopup()) {
+    document.documentElement.classList.add("popupview");
+  }
 };
 
 // Background image
@@ -227,18 +268,13 @@ const uiHandleBackgroundImg = () => {
 
 // END: Background image
 
-const uiSetPopupViewState = () => {
-  if (inPopup()) {
-    document.documentElement.classList.add("popupview");
-  }
-};
-
 const onLoad = async () => {
   const plexBtn = document.querySelector("sync-buttons-button.Plex");
   const simklBtn = document.querySelector("sync-buttons-button.Simkl");
   const syncBtn = document.querySelector("sync-form-button");
   const urlInput = document.querySelector("sync-form-plex-url>input");
   const durationInput = document.querySelector("sync-form-select-time>select");
+  const syncNowBtn = document.querySelector("sync-desc-line-2");
 
   plexBtn.addEventListener("click", async (_) => {
     let { plexOauthToken } = await chrome.storage.sync.get({
@@ -281,28 +317,36 @@ const onLoad = async () => {
         plexInstanceUrl: normalizedUrl,
         syncPeriod: durationInput.value,
       });
-      if (await isSyncRunning()) {
+      if (await isSyncEnabled()) {
+        await renewOrginPerms(oldPlexUrl, normalizedUrl);
         // sync enabled; stop it
         uiSyncDisabled();
         stopLibrarySync();
         uiBroadcastSyncState(false);
-        if (oldPlexUrl.originUrl() != normalizedUrl.originUrl()) {
-          // remove permissions for old url
-          removePlexURIPermissions(oldPlexUrl);
-        }
       } else {
         // https://stackoverflow.com/questions/27669590/chrome-extension-function-must-be-called-during-a-user-gesture
-        if (await requestPlexURIPermissions(urlInput.value)) {
-          uiSyncEnabled();
-          // TODO: remove the sync-errors
-          startLibrarySync(durationInput.value);
-          uiBroadcastSyncState(true);
-          await chrome.storage.local.set({
-            doFullSync: true,
-          });
-        }
+        await renewOrginPerms(oldPlexUrl, normalizedUrl);
+        uiSyncEnabled();
+        // TODO: remove the sync-errors
+        startLibrarySync(durationInput.value);
+        uiBroadcastSyncState(true);
+        await chrome.storage.local.set({
+          doFullSync: true,
+        });
       }
     }
+  });
+  syncNowBtn.addEventListener("click", async (_) => {
+    if (!document.body.classList.contains("sync-waiting-for-next-sync")) {
+      return;
+    }
+    // Force sync
+    console.debug("starting syncing manually before next scheduled sync");
+    let message = {
+      type: CallType.call,
+      method: CallType.bg.sync.start,
+    };
+    await chrome.runtime.sendMessage(message);
   });
 
   handleHashRoutes();
@@ -320,8 +364,10 @@ const onLoad = async () => {
     if (!!syncPeriod) {
       durationInput.value = syncPeriod;
     }
-    if (await isSyncRunning()) {
+    if (await isSyncEnabled()) {
       uiSyncEnabled();
+      // next sync timer
+      handleNextSyncTimer();
     }
   })();
 
@@ -334,7 +380,7 @@ window.addEventListener("resize", uiHandleBackgroundImg);
 
 // Registering UI event handlers (actions)
 
-chrome.runtime.onMessage.addListener((message, sender) => {
+chrome.runtime.onMessage.addListener(async (message, sender) => {
   // console.debug("Got message:", message, "from:", sender);
   switch (message.type) {
     case ActionType.action:
@@ -366,18 +412,18 @@ chrome.runtime.onMessage.addListener((message, sender) => {
           break;
         case ActionType.ui.sync.plex.offline:
           document.body.classList.add("error-plex-url-offline");
-          uiSyncDisabled();
-          stopLibrarySync();
+          // uiSyncDisabled();
+          // stopLibrarySync();
           break;
         case ActionType.ui.sync.simkl.online:
           document.body.classList.remove("error-simkl-url-offline");
           break;
-          case ActionType.ui.sync.simkl.offline:
+        case ActionType.ui.sync.simkl.offline:
           // TODO: max retries for offline?
           // better disable sync if offline immediately
           document.body.classList.add("error-simkl-url-offline");
-          uiSyncDisabled();
-          stopLibrarySync();
+          // uiSyncDisabled();
+          // stopLibrarySync();
           break;
         case ActionType.ui.sync.plex.connecting:
           document.body.classList.add("sync-connecting-to-plex");
@@ -421,6 +467,23 @@ chrome.runtime.onMessage.addListener((message, sender) => {
           break;
         case ActionType.ui.sync.progress:
           // TODO: handle earch progress item
+          if (message.value <= 0) {
+            return;
+          }
+          document.body.classList.add("sync-in-progress-plex");
+          document.body.classList.remove("sync-waiting-for-next-sync");
+          // must be a string, css won't parse int type in var
+          setCssVar("--plex-items-count", `"${message.value}"`);
+          break;
+        case ActionType.ui.sync.finished:
+          // sync finished
+          setCssVar("--plex-items-count", 0);
+          document.body.classList.remove("sync-in-progress-plex");
+          document.body.classList.add("sync-waiting-for-next-sync");
+          let { syncPeriod } = await chrome.storage.local.get({
+            syncPeriod: DefaultSyncPeriod,
+          });
+          setCssVar("--plex-timer", `"${syncPeriod}:00:00"`);
           break;
         default:
           console.debug("Unknown action", message);
@@ -436,3 +499,31 @@ chrome.runtime.onMessage.addListener((message, sender) => {
   // required if we don't use sendResponse
   return true;
 });
+
+const handleNextSyncTimer = async () => {
+  let { lastSynced, syncPeriod } = await chrome.storage.local.get({
+    lastSynced: null,
+    syncPeriod: DefaultSyncPeriod,
+  });
+  let now = () => new Date();
+  let lastSyncedTime = new Date(lastSynced);
+  let scheduledSyncTime = new Date(
+    (await chrome.alarms.get(AlarmKey)).scheduledTime
+  );
+  let remainingMS = () => scheduledSyncTime.getTime() - now().getTime();
+  // TODO: determine if sync is ongoing and don't show this
+  if (now() > lastSyncedTime && now() < scheduledSyncTime) {
+    document.body.classList.add("sync-waiting-for-next-sync");
+    let totSecs = parseInt(syncPeriod) * 60 * 60;
+    setCssVar("--plex-timer", `"${msToHMS(remainingMS())}"`);
+    let interval = setInterval(() => {
+      totSecs--;
+      setCssVar("--plex-timer", `"${msToHMS(remainingMS())}"`);
+      if (totSecs === 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+  } else {
+    document.body.classList.remove("sync-waiting-for-next-sync");
+  }
+};

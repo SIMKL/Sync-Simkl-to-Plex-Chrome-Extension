@@ -17,6 +17,14 @@ const removeWindowHash = () => {
   );
 };
 
+const removeWindowQueryParams = () => {
+  window.history.replaceState(
+    "",
+    document.title,
+    window.location.pathname + window.location.hash
+  );
+};
+
 const debounce = (func, timeout = 400) => {
   let timer;
   return (...args) => {
@@ -78,6 +86,9 @@ const chromeTabsUpdateBugVerCheck = () =>
 // https://codepen.io/quic5/pen/wWPmKO
 // https://eu.simkl.in/css/tv/style_var.css?v126 search for #Alert7
 
+// Note: usage await iosAlert(message, title)
+// await will force UI to stall (intentional)
+// if iosAlert() is used without await, ui will work on normally
 const iosAlert = async function () {
   try {
     var $alert = document.querySelector("#Alert");
@@ -151,7 +162,7 @@ const setBrowserInfo = () => {
         browserVersion: BrowserVersion,
         browserName: "Chrome", // as of now only a chrome extension
         osName: OSName,
-        osLanguage: OSLanguage,
+        osLanguage: OSLanguageStripped,
       },
     },
     async () => {
@@ -164,3 +175,22 @@ const setBrowserInfo = () => {
 };
 
 setBrowserInfo();
+
+// https://stackoverflow.com/a/69590637
+const msToHMS = (ms) => {
+  // 1- Convert to seconds:
+  var seconds = ms / 1000;
+  // 2- Extract hours:
+  var hours = parseInt(seconds / 3600); // 3600 seconds in 1 hour
+  seconds = parseInt(seconds % 3600); // extract the remaining seconds after extracting hours
+  // 3- Extract minutes:
+  var minutes = parseInt(seconds / 60); // 60 seconds in 1 minute
+  // 4- Keep only seconds not extracted to minutes:
+  seconds = parseInt(seconds % 60);
+  // 5 - Format so it shows a leading zero if needed
+  let hoursStr = ("00" + hours).slice(-2);
+  let minutesStr = ("00" + minutes).slice(-2);
+  let secondsStr = ("00" + seconds).slice(-2);
+
+  return hoursStr + ":" + minutesStr + ":" + secondsStr;
+};

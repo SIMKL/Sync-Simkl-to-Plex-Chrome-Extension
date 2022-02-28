@@ -22,6 +22,7 @@ const n_1 = (_) => {};
 const n_2 = (_, __) => {};
 const _1 = async (_) => {};
 const _2 = async (_, __) => {};
+const _3 = async (_, __, _x) => {};
 
 // this structure is required
 // but _1, _2, n_1, n_2, etc. can be replaced with null.
@@ -58,7 +59,7 @@ let __API__ = {
     },
     apis: {
       getLastActivity: _2,
-      getAllItems: _2,
+      getAllItems: _3,
       getUserInfo: _1,
     },
   },
@@ -109,6 +110,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             ),
           });
           return true;
+        case CallType.bg.sync.start:
+          self.aController = new AbortController();
+          startBgSync(aController.signal);
+          return true;
+        case CallType.bg.sync.stop:
+          self.aController.abort();
+          return true;
 
         // API methods
         case CallType.apis.plex.getBgUrl:
@@ -133,14 +141,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 // Periodic background sync
 
 importScripts("./sync.js");
-
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  // works even when the service work is inactive
-  if (alarm.name == "plex-libray-sync") {
-    // TODO: plex libray sync
-    await startBgSync();
-  }
-});
 
 // Intercept and redirect to chrome-extension://
 

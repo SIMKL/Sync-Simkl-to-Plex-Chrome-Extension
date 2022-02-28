@@ -1,6 +1,16 @@
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  // works even when the service work is inactive
+  if (alarm.name == AlarmKey) {
+    // plex libray sync
+    self.aController = new AbortController();
+    await startBgSync(self.aController.signal);
+  }
+});
+
 class UIEvents {
   // TODO: <BUG> the Js ui is not updating
   // after these events fire, check why
+  // Found it was due to css issues
   static tokenExpired = (api = "plex") => {
     UIEvents.connectDone(api);
     chrome.runtime.sendMessage({
@@ -148,8 +158,8 @@ const plexInstalledAgents = async (apiConf) => {
   };
 };
 
-const startBgSync = async () => {
-  await fetchAniDBTvDBMappings();
+const startBgSync = async (signal) => {
+  await fetchAniDBTvDBMappings(signal);
 
   let config = await userConfig();
   let { plexInstanceUrl, syncPeriod, plexOauthToken, simklOauthToken } = config;
@@ -184,17 +194,17 @@ const startBgSync = async () => {
     );
     console.debug(fullLibraryList);
     // start processing the results
-    let fullList = fullLibraryList.map((l) => {
+    let plexMediaList = fullLibraryList.map((l) => {
       if (l.error) {
         console.error(l.error);
         return [];
       }
       return l.items.filter((item) => !!item.Guid || !!item.guid);
     });
-    console.debug(fullList);
+    console.debug(plexMediaList);
 
-    // TODO guid lut
-    let guidLut = await plexLibraryGuidLut(fullList, pconf);
+    // guid lut
+    let guidLut = await plexLibraryGuidLut(plexMediaList, pconf);
     console.debug(guidLut);
     UIEvents.connectDone("plex");
 
@@ -238,21 +248,31 @@ const startBgSync = async () => {
       data: simklChanges,
       serverTime,
       error: err,
-    } = await __API__.simkl.apis.getAllItems({
-      dates,
-      token: simklOauthToken,
-    });
+    } = await __API__.simkl.apis.getAllItems(
+      {
+        dates,
+        token: simklOauthToken,
+      },
+      null,
+      signal
+    );
     if (!success) {
-      console.error(err);
-      // TODO: this shouldn't be done. remove it later
-      syncDone(serverTime);
+      if (err instanceof DOMException) {
+        console.debug("User canceled sync");
+        return;
+      }
       // TODO: sync failed, save error?
+      console.error(err);
       return;
     }
     console.debug(simklChanges, serverTime);
     UIEvents.connectDone("simkl");
 
     for (let mediaType of Object.keys(simklChanges)) {
+      if (!!signal && signal.aborted) {
+        console.debug("User canceled sync");
+        return;
+      }
       // mediaType ∈ {'anime', 'movies', 'shows'}
       switch (mediaType) {
         case MediaType.movies:
@@ -362,15 +382,32 @@ const startBgSync = async () => {
       }
     }
 
-    // TODO: start sync
-    for (let type of fullList) {
-      for (let item of type) {
-        console.debug(item);
-        break;
+    let totalSyncCount = plexMediaList.reduce((accum, item) => {
+      return accum + item.length;
+    }, 0);
+    console.log("Total sync count", totalSyncCount);
+    // return;
+
+    // TODOOOO: start sync
+    let currentIdx = 0;
+    let pMessage = {
+      type: ActionType.action,
+      action: ActionType.ui.sync.progress,
+      value: currentIdx,
+    };
+    for (let mediaType of plexMediaList) {
+      for (let _item of mediaType) {
+        if (!!signal && signal.aborted) {
+          console.debug("User canceled sync");
+          return;
+        }
+        currentIdx++;
+        pMessage.value = totalSyncCount - currentIdx;
+        chrome.runtime.sendMessage(pMessage);
+        await sleep(20);
       }
     }
-
-    syncDone(serverTime);
+    await syncDone(serverTime);
   } else {
     if (!simklOauthToken) {
       UIEvents.tokenExpired("simkl");
@@ -392,12 +429,17 @@ const startBgSync = async () => {
   }
 };
 
-const syncDone = (serverTime) => {
+const syncDone = async (serverTime) => {
   // sync done
-  chrome.storage.local.set({
+  await chrome.storage.local.set({
     lastSynced: serverTime,
   });
-  chrome.storage.local.remove("doFullSync");
+  await chrome.storage.local.remove("doFullSync");
+  let doneMsg = {
+    type: ActionType.action,
+    action: ActionType.ui.sync.finished,
+  };
+  await chrome.runtime.sendMessage(doneMsg);
 };
 
 /*
@@ -448,10 +490,11 @@ const simklAnimeIdstoPlexIds = (media) =>
 
 // unused might required for later
 
-const fetchAniDBTvDBMappings = async () => {
+const fetchAniDBTvDBMappings = async (signal) => {
   try {
     let resp = await fetch(
-      "https://raw.githubusercontent.com/Anime-Lists/anime-lists/master/anime-list.xml"
+      "https://raw.githubusercontent.com/Anime-Lists/anime-lists/master/anime-list.xml",
+      { signal }
     ).catch((err) => {
       throw err;
     });
@@ -468,7 +511,7 @@ const fetchAniDBTvDBMappings = async () => {
     }
     console.debug(ret);
   } catch (error) {
-    console.error(error);
+    console.error(error, typeof error);
   }
 };
 

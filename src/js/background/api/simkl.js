@@ -104,7 +104,11 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     return true;
   };
 
-  const getAllItems = async ({ dates = {}, token }, responseChannel) => {
+  const getAllItems = async (
+    { dates = {}, token },
+    responseChannel,
+    signal
+  ) => {
     console.debug("getAllItems: ", dates, token);
     let types = ["shows", "movies", "anime"];
     let serverTime;
@@ -122,6 +126,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
                 Authorization: `Bearer ${token}`,
                 "simkl-api-key": SimklClientID,
               },
+              signal,
             }
           ).catch((err) => {
             throw err;

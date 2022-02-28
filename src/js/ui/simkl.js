@@ -25,6 +25,8 @@ const finishLogoutSimkl = (_message) => {
   chrome.storage.sync.remove("simklOauthToken", () => {
     setUISimklDisconnected();
   });
+  uiSyncDisabled();
+  stopLibrarySync();
 };
 
 const startSimklOauth = () => {
@@ -57,8 +59,8 @@ const finishSimklOauth = (message) => {
     saveSimklAuthToken(message.authToken);
     return true;
   }
-  // TODO: show errors
-  // setUIErrorMessage(message.error);
+  // TODO: simkl oauth finish show any errors
+  // Something like `setUIErrorMessage(message.error)` ?
   console.debug(message);
 };
 
@@ -79,9 +81,10 @@ const checkSimklAuthTokenValidity = () => {
         setUISimklConnected();
         saveSimklAuthToken(authToken);
       } else {
-        // TODO: show login prompt again
-        // auth_token was revoked
+        // TODO: simkl auth_token revoked handle ux
+        // Show login prompt again
         // with message describing that the old session expired
+        logoutSimkl();
         console.debug(response);
       }
     }

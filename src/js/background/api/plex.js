@@ -33,7 +33,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   };
 
   const throwError = (err) => {
-    console.warn(err);
+    console.error(err);
     throw err;
   };
 

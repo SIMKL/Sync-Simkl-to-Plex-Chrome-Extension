@@ -2,8 +2,8 @@
 
 #### `@phanirithvij`
 
-- [ ] API methods
-  - [ ] Oauth
+- [x] API methods
+  - [x] Oauth
     - [x] Plex get authtoken
     - [x] Simkl get authtoken
     - [x] Control flow
@@ -11,13 +11,13 @@
       - [ ] Show errors/info messages in UI
       - [x] Reopening popup should resume state, use `localStorage` for persistance.
         - This is not an issue when in full tab
-  - [ ] Simkl
-    - [ ] Full history endpoint
-    - [ ] Query based on last synced timestamp
+  - [x] Simkl
+    - [x] Full history endpoint
+    - [x] Query based on last synced timestamp
       - check what this endpoint is in docs
-  - [ ] Plex
-    - [ ] List out local libraries and their entries
-    - [ ] Update a library info and entry info and status
+  - [x] Plex
+    - [x] List out local libraries and their entries
+    - [x] Update a library info and entry info and status
     - [ ] Decide on how content is matched in simkl and plex
 - [x] Ask user to setup syncing options
   - [x] Every `x` hrs
@@ -27,9 +27,11 @@
 - [x] Redirect to uninstalled feedback page once uninstalled.
 - [ ] All the other minor todos and fixmes scattered across the code.
 
-#### `@andrewmasyk`
+#### `@masyk`
 
 - [x] UX/UI
 - [ ] Extension uninstall feedback (internal simkl.com) page
 - [ ] (maybe needed) Php code for proxying plex oauth requests
   - This would get rid of the warning message shown by plex's oauth screen.
+- [ ] Extension icon, name, description
+

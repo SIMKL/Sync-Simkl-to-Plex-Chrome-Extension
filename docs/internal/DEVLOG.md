@@ -110,9 +110,10 @@ This document describes the development workflow that went into this project.
     - Conclusion was to make 3 api calls one for each media type (`anime, shows, movies`)
     - To reduce each network call's load on the server and browser processing time.
     - This had to be done because there is not pagination support for the all-times endpoint.
-  - TODO: @ekleop may need to add a server-time field to the response of all-times api call.
+  - @ekleop may need to add a server-time field to the response of all-times api call.
     - Or use a common time server for everything to solve the age old problem of not trusting client's clock time for anything important.
     - This is to avoid errors and corrupting any resources (user's plex library in this case)
+    - Can use server's Date response header
   - Started working on these simkl activity api calls
 
 #### `8/2/2022`
@@ -251,6 +252,13 @@ This document describes the development workflow that went into this project.
     - Now en-us.js is not needed as only permission alert strings were hardcoded. Every other string is from en-us.css.
     - Removed en-us.js code.
     - Alert is being used for handling `origin` permission request flow for each plex url input by the user.
+
+#### `28/2/2022`
+
+- `@phanirithvij`
+  - The `chrome.webRequest` API which we use to redirect back to the extension page after oauth **requires** `host_permissions` to be specified in the manifest.
+  - Currently using `"*://*/*"` as a host permission to allow `http://<ext_dev_id>/*` as it is not possible to know the extension id before publishing it.
+
 
 #### Notes (`@phanirithvij`)
 

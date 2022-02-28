@@ -22,8 +22,6 @@ const sha512 = async (str) => {
     .join("");
 };
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 let OSName, OSLanguage, BrowserVersion, BrowserName;
 
 const loadBrowserInfo = async () => {
