@@ -62,7 +62,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         };
         chrome.runtime.sendMessage(message);
       });
-    consoledebug("SW: Checking token validity")();
+    // consoledebug("SW: Checking token validity")();
     if (!token) {
       let { plexOauthToken } = await chrome.storage.sync.get({
         plexOauthToken: null,
@@ -78,7 +78,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       const ac = new AbortController();
       // 5 second timeout:
       const timeoutId = setTimeout(() => ac.abort(), 5000);
-      consoledebug("SW: fetch user info from plex.tv")();
+      // consoledebug("SW: fetch user info from plex.tv")();
       let resp = await fetch(
         "https://plex.tv/api/v2/user?" +
           stringifyPlex({
@@ -126,7 +126,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         );
         return;
       }
-      consoledebug("SW: got the response")();
+      consoledebug("SW: fetched user info from plex.tv")();
       responseChannel(makeSuccessResponse(data));
     } catch (error) {
       broadcastOnlineStatus(false);

@@ -2,4 +2,6 @@
 temp/
 node_modules/
 src/js/background/env.js
+# TODO: remove this
 inspirobot.me/
+dist/

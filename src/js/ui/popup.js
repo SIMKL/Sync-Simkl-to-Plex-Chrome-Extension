@@ -310,7 +310,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
             // TODO: show login prompt
             // with message describing that the old session expired
             logoutPlex();
-            consoledebug(response)();
+            consoledebug(message)();
           }
           break;
         case ActionType.oauth.plex.logout:
@@ -333,7 +333,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
             // Show login prompt again
             // with message describing that the old session expired
             logoutSimkl();
-            consoledebug(response)();
+            consoledebug(message)();
           }
           break;
         case ActionType.oauth.simkl.logout:
@@ -478,18 +478,23 @@ const startNextSyncTimer = async () => {
 };
 
 const pingServiceWorker = async () => {
+  consoledebug("ping service worker")();
   // ping service worker every 2 minutes
-  setInterval(pingServiceWorker, 120 * 1000);
+  window.pingerHandle && clearInterval(pingerHandle);
+  window.pingerHandle = setInterval(pingServiceWorker, 120 * 1000);
   let m = {
     type: CallType.call,
     method: CallType.bg.sw.ping,
   };
   await chrome.runtime.sendMessage(m);
-  setTimeout(() => {
+  window.pingerTimeout && clearTimeout(window.pingerTimeout);
+  window.pingerTimeout = setTimeout(() => {
     if (window.swPong) {
+      consoledebug("service worker responded", window.swPong)();
       window.swPong = null;
       return;
     }
+    consoledebug("service worker did not respond after 6sec", pongFound())();
     unresponsiveServiceWorkerAlert();
   }, 6000);
 };

@@ -1,40 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Sync Simkl to Plex</title>
-		
-		
-		<style>
-			body {
-				--background-color : #0C0F11;
-				--text-color : #B9B9B9;
-				--plex-color: #E9A300;
-				--white-color : #FFF;
-				--form-button-color : #3500E9;
-				--form-button-color-red : #E90017;
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sync Simkl to Plex</title>
 
-				--desc-width: 414px;
-				--form-width: 314px;
+    <style>
+      body {
+        --background-color: #0c0f11;
+        --text-color: #b9b9b9;
+        --plex-color: #e9a300;
+        --white-color: #fff;
+        --form-button-color: #3500e9;
+        --form-button-color-red: #e90017;
 
-				background-color: var(--background-color);
-				color: var(--text-color);
-				font-family: Segoe, "Segoe UI", "DejaVu Sans", "Trebuchet MS", Verdana, "sans-serif";
-				font-size: 20px;
-				text-align: center;
-			}	
-		</style>
-		
-		<link href="css/language/en-us.css" rel="stylesheet" type="text/css" >
-		<link href="css/popup-style.css" rel="stylesheet" type="text/css" >
-		<link href="css/alert.css" rel="stylesheet" type="text/css" >
-		
-	</head>
-	
-	
-	<!-- 
+        --desc-width: 414px;
+        --form-width: 314px;
+
+        background-color: var(--background-color);
+        color: var(--text-color);
+        font-family: Segoe, "Segoe UI", "DejaVu Sans", "Trebuchet MS", Verdana,
+          "sans-serif";
+        font-size: 20px;
+        text-align: center;
+      }
+    </style>
+
+    <link href="css/language/en-us.css" rel="stylesheet" type="text/css" />
+    <link href="css/popup-style.css" rel="stylesheet" type="text/css" />
+    <link href="css/alert.css" rel="stylesheet" type="text/css" />
+  </head>
+
+  <!-- 
 	Possible body classes:
 
 	connected-simkl
@@ -64,53 +62,58 @@
 	--plex-timer				= how much time left before next sync to plex. Example: --plex-timer: 05:03:34;
 
 	-->
-	<body class="">
-
-		<sync>
-			<sync-header><img src="img/logo.png" width="306" height="33" alt="Simkl to Plex"/></sync-header>
-			<sync-desc>
-				<sync-desc-line-1></sync-desc-line-1>
-				<sync-desc-line-2></sync-desc-line-2>
-			</sync-desc>
-			<sync-buttons>
-			  <sync-buttons-button class="Simkl"></sync-buttons-button>
-			  <sync-buttons-button class="Plex"></sync-buttons-button>
-			</sync-buttons>
-			<sync-form>
-				<sync-form-plex-url>
-					<input type="text" id="plex-url" placeholder="http://yourplexserverip:32400">
-				</sync-form-plex-url>
-				<sync-form-select-time>
-					<select>
-					  <option value="6">Every 6 hours</option>
-					  <option value="7">Every 7 hours</option>
-					  <option value="8">Every 8 hours</option>
-					  <option value="9">Every 9 hours</option>
-					  <option value="10">Every 10 hours</option>
-					  <option value="11">Every 11 hours</option>
-					  <option value="12" selected>Every 12 hours</option>
-					  <option value="13">Every 13 hours</option>
-					  <option value="14">Every 14 hours</option>
-					  <option value="15">Every 15 hours</option>
-					  <option value="16">Every 16 hours</option>
-					  <option value="17">Every 17 hours</option>
-					  <option value="18">Every 18 hours</option>
-					  <option value="19">Every 19 hours</option>
-					  <option value="20">Every 20 hours</option>
-					  <option value="21">Every 21 hours</option>
-					  <option value="22">Every 22 hours</option>
-					  <option value="23">Every 23 hours</option>
-					  <option value="24">Every 24 hours</option>
-					</select>
-				</sync-form-select-time>
-				<sync-form-button></sync-form-button>
-			</sync-form>
-			<sync-footer-desc></sync-footer-desc>
-		</sync>
-		<script type="text/javascript" src="js/common.js"></script> 
-		<script type="text/javascript" src="js/ui/utils.js"></script> 
-		<script type="text/javascript" src="js/ui/plex.js"></script> 
-		<script type="text/javascript" src="js/ui/simkl.js"></script> 
-		<script type="text/javascript" src="js/ui/popup.js"></script> 
-	</body>
+  <body class="">
+    <sync>
+      <sync-header
+        ><img src="img/logo.png" width="306" height="33" alt="Simkl to Plex"
+      /></sync-header>
+      <sync-desc>
+        <sync-desc-line-1></sync-desc-line-1>
+        <sync-desc-line-2></sync-desc-line-2>
+      </sync-desc>
+      <sync-buttons>
+        <sync-buttons-button class="Simkl"></sync-buttons-button>
+        <sync-buttons-button class="Plex"></sync-buttons-button>
+      </sync-buttons>
+      <sync-form>
+        <sync-form-plex-url>
+          <input
+            type="text"
+            id="plex-url"
+            placeholder="http://yourplexserverip:32400"
+          />
+        </sync-form-plex-url>
+        <sync-form-select-time>
+          <select>
+            <option value="6">Every 6 hours</option>
+            <option value="7">Every 7 hours</option>
+            <option value="8">Every 8 hours</option>
+            <option value="9">Every 9 hours</option>
+            <option value="10">Every 10 hours</option>
+            <option value="11">Every 11 hours</option>
+            <option value="12" selected>Every 12 hours</option>
+            <option value="13">Every 13 hours</option>
+            <option value="14">Every 14 hours</option>
+            <option value="15">Every 15 hours</option>
+            <option value="16">Every 16 hours</option>
+            <option value="17">Every 17 hours</option>
+            <option value="18">Every 18 hours</option>
+            <option value="19">Every 19 hours</option>
+            <option value="20">Every 20 hours</option>
+            <option value="21">Every 21 hours</option>
+            <option value="22">Every 22 hours</option>
+            <option value="23">Every 23 hours</option>
+            <option value="24">Every 24 hours</option>
+          </select>
+        </sync-form-select-time>
+        <sync-form-button></sync-form-button>
+      </sync-form>
+      <sync-footer-desc></sync-footer-desc>
+    </sync>
+    <script type="text/javascript" src="js/common.js"></script>
+    <script type="text/javascript" src="js/ui/utils.js"></script>
+    <script type="text/javascript" src="js/ui/plex.js"></script>
+    <script type="text/javascript" src="js/ui/simkl.js"></script>
+    <script type="text/javascript" src="js/ui/popup.js"></script>
+  </body>
 </html>

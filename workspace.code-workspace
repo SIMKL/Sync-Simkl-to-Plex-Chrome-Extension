@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "./scripts/plex"
+		},
+		{
+			"path": "./scripts/logger"
+		},
+	],
+	"settings": {}
+}
