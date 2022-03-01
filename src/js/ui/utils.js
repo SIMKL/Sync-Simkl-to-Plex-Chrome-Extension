@@ -79,8 +79,8 @@ const inPopup = () => {
     98.0.4758.102   // Does not work
   Can use string compare as chrome follows semvers
 */
-const chromeTabsUpdateBugVerCheck = () =>
-  getChromeVersion().fullStr < "99.0.4783.0";
+const chromeTabsUpdateBugVerCheck = async () =>
+  (await getChromeVersion()).fullStr < "99.0.4783.0";
 
 // Alerts
 // https://codepen.io/quic5/pen/wWPmKO
@@ -122,9 +122,19 @@ const iosAlert = async function () {
   });
 };
 
-const getChromeVersion = () => {
+const getChromeVersion = async () => {
+  // https://web.dev/migrate-to-ua-ch/
+  let ua = "";
+  if (navigator.userAgentData) {
+    let { uaFullVersion } = await navigator.userAgentData.getHighEntropyValues([
+      "uaFullVersion",
+    ]);
+    ua = `Chrome/${uaFullVersion}`;
+  } else {
+    ua = navigator.userAgent;
+  }
   // https://stackoverflow.com/a/47454708
-  var pieces = navigator.userAgent.match(
+  let pieces = ua.match(
     /Chrom(?:e|ium)\/([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/
   );
   if (pieces == null || pieces.length != 5) {
@@ -141,10 +151,16 @@ const getChromeVersion = () => {
   };
 };
 
-let _ver = getChromeVersion();
-const BrowserVersion = `${_ver.major}.${_ver.minor}`;
-const BrowserVersionFull = _ver.fullStr;
-const OSName = navigator.userAgentData.platform;
+(async () => {
+  let _ver = await getChromeVersion();
+  window.BrowserVersion = `${_ver.major}.${_ver.minor}`;
+  window.BrowserVersionFull = _ver.fullStr;
+  setBrowserInfo();
+})();
+
+const OSName = navigator.userAgentData
+  ? navigator.userAgentData.platform
+  : navigator.platform;
 // https://stackoverflow.com/a/25603630
 const OSLanguage = navigator.languages
   ? navigator.languages[0]
@@ -166,15 +182,13 @@ const setBrowserInfo = () => {
       },
     },
     async () => {
-      console.debug(
+      consoledebug(
         "setBrowserInfo",
         await chrome.storage.local.get("browserInfo")
-      );
+      )();
     }
   );
 };
-
-setBrowserInfo();
 
 // https://stackoverflow.com/a/69590637
 const msToHMS = (ms) => {

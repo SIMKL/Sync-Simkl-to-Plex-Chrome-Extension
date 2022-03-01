@@ -6,7 +6,8 @@ const AlarmKey = "plex-libray-sync";
 const UNINSTALL_URL =
   "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
 // TODO: move this to false in prod
-const DEVELOPMENT = false;
+const DEVELOPMENT = true;
+// const DEVELOPMENT = false;
 
 // Utils
 
@@ -178,7 +179,7 @@ const interceptLogs = () => {
       if (DEVELOPMENT) {
         const ac = new AbortController();
         // 1sec timeout:
-        const timeoutId = setTimeout(() => ac.abort(), 1000);
+        const timeoutId = setTimeout(() => ac.abort(), 400);
         fetch(`http://localhost:3000`, {
           method: "POST",
           headers: {
@@ -190,7 +191,7 @@ const interceptLogs = () => {
             clientTime: now,
             logLevel: method,
             type: typeof window == "object" ? "window" : "sw",
-            args,
+            args: JSON.stringify(args),
           }),
         })
           .then(() => {
@@ -202,13 +203,8 @@ const interceptLogs = () => {
             // copyCon.error(e);
           });
       }
-      return Function.prototype.bind.call(
-        copyCon[method],
-        console,
-        now,
-        cIdx,
-        ...args
-      );
+      // https://github.com/akoidan/lines-logger
+      return Function.prototype.bind.call(copyCon[method], console, ...args);
     };
   });
 };

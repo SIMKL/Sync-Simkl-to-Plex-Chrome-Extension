@@ -29,7 +29,7 @@ const finishLogoutPlex = (_message) => {
 };
 
 const startPlexOauth = () => {
-  console.debug("Starting plex authentication flow");
+  consoledebug("Starting plex authentication flow")();
   chrome.runtime.sendMessage(
     {
       type: CallType.call,
@@ -62,13 +62,13 @@ const finishPlexOauth = (message) => {
   }
   // TODO: show errors
   // setUIErrorMessage(message.error);
-  console.debug(message);
+  consoledebug(message)();
 };
 
 const checkPlexAuthTokenValidity = () => {
   // Gets plexOauthToken from chrome.storage.sync
   // Checks whether it's valid and request user to login again if not
-  console.debug("Check plex auth token validity");
+  consoledebug("Check plex auth token validity")();
   // Note: broadcasting to other connected views is not needed for this
   chrome.runtime.sendMessage(
     {
@@ -76,7 +76,7 @@ const checkPlexAuthTokenValidity = () => {
       method: CallType.oauth.plex.checkTokenValiditiy,
     },
     (response) => {
-      console.debug("plexOauthvalidity: got response", response);
+      consoledebug("plexOauthvalidity: got response", response)();
       const { authToken, valid } = response;
       if (valid) {
         // set plex button ui accordingly
@@ -85,7 +85,7 @@ const checkPlexAuthTokenValidity = () => {
       } else {
         // TODO: show login prompt
         // with message describing that the old session expired
-        console.debug(response);
+        consoledebug(response)();
       }
     }
   );

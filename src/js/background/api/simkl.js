@@ -14,7 +14,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     });
     if (!!simklOauthToken) {
       let { valid } = await getLastActivity(simklOauthToken);
-      console.debug("Saved simkl token:", simklOauthToken);
+      consoledebug("Saved simkl token:", simklOauthToken)();
       responseChannel(
         makeSuccessResponse({ authToken: simklOauthToken, valid })
       );
@@ -60,12 +60,12 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 
   const oauthStart = async (responseChannel, inPopup) => {
     let { simklPinCode } = await chrome.storage.local.get();
-    console.debug("localStorage:", { simklPinCode });
+    consoledebug("localStorage:", { simklPinCode })();
 
     if (!!simklPinCode) {
       // after redirect step
       let response = await getAuthToken(simklPinCode);
-      console.debug("Simkl access_token response:", response);
+      consoledebug("Simkl access_token response:", response)();
       if ("error" in response) {
         // failed to authenticate the user
         // TODO: this might be because code expired
@@ -88,7 +88,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     }
 
     let appAuthorizeUrl = loginURI();
-    console.debug("Simkl application auth URL:", appAuthorizeUrl);
+    consoledebug("Simkl application auth URL:", appAuthorizeUrl)();
     if (inPopup) {
       // open url in new tab
       chrome.tabs.create({ url: appAuthorizeUrl });
@@ -98,7 +98,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       chrome.tabs.update({ url: appAuthorizeUrl }, () => {
         // this debugging step printed nothing when chromeTabsUpdateBugVerCheck
         // bug was happening (when reaching this point)
-        chrome.runtime.lastError && console.error(chrome.runtime.lastError);
+        chrome.runtime.lastError && consoleerror(chrome.runtime.lastError)();
       });
     }
     return true;
@@ -109,7 +109,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     responseChannel,
     signal
   ) => {
-    console.debug("getAllItems: ", dates, token);
+    consoledebug("getAllItems: ", dates, token)();
     let types = ["shows", "movies", "anime"];
     let serverTime;
     try {
@@ -142,7 +142,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
           if (resp.status == 200) {
             let items = await resp.json();
             if (items) {
-              console.debug("Got items for: ", types[i]);
+              consoledebug("Got items for: ", types[i])();
               data[types[i]] = items[types[i]];
               return;
             }

@@ -11,7 +11,9 @@
     },
     "host_permissions": [
         "http://fdoomgaljjnbjgfijmbomnalapkmjifl/*",
-        "https://*.google.com/*"
+        "https://*.google.com/*",
+        "https://api.simkl.com/*",
+        "https://*.plex.tv/*"
     ],
     "permissions": [
         "webRequest",

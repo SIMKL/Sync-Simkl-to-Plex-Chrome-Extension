@@ -85,7 +85,7 @@ const plexLibraryGuidLut = async (fullList, pconf) => {
   }
   pAgents.shows = pAgents.shows.agents || [];
   pAgents.movies = pAgents.movies.agents || [];
-  console.debug("Agents list", pAgents);
+  consoledebug("Agents list", pAgents)();
 
   fullList.forEach((type) =>
     type.forEach((item) => {
@@ -131,20 +131,20 @@ const plexLibraryGuidLut = async (fullList, pconf) => {
               // these two would've been handled in
               // if (item.Guid) block instead of this
               // elseif (item.guid)  block
-              console.debug("unreachable", item.guid);
+              consoledebug("unreachable", item.guid)();
               break;
             default:
-              console.debug("Unknown agent", parts[0]);
+              consoledebug("Unknown agent", parts[0])();
               break;
           }
         } else if (pAgents.movies.length == 0 || pAgents.shows.length == 0) {
           // TODO: maybe plex instance is offline
-          console.error(pErr);
+          consoleerror(pErr)();
         } else unknownGuidList.push(item.guid);
       }
     })
   );
-  console.debug(unknownGuidList);
+  consoledebug(unknownGuidList)();
   return guidLut;
 };
 
@@ -171,12 +171,12 @@ const startBgSync = async (signal) => {
       false
     );
     if (!libraries) {
-      console.error(error);
+      consoleerror(error)();
       // TODO: check if plex token expired
       UIEvents.connectFailed("plex");
       return;
     }
-    console.debug(libraries);
+    consoledebug(libraries)();
     let fullLibraryList = await Promise.all(
       libraries.map(
         async (l) =>
@@ -189,20 +189,20 @@ const startBgSync = async (signal) => {
           )
       )
     );
-    console.debug(fullLibraryList);
+    consoledebug(fullLibraryList)();
     // start processing the results
     let plexMediaList = fullLibraryList.map((l) => {
       if (l.error) {
-        console.error(l.error);
+        consoleerror(l.error)();
         return [];
       }
       return l.items.filter((item) => !!item.Guid || !!item.guid);
     });
-    console.debug(plexMediaList);
+    consoledebug(plexMediaList)();
 
     // guid lut
     let guidLut = await plexLibraryGuidLut(plexMediaList, pconf);
-    console.debug(guidLut);
+    consoledebug(guidLut)();
     UIEvents.connectDone("plex");
 
     UIEvents.connectStarted("simkl");
@@ -224,22 +224,22 @@ const startBgSync = async (signal) => {
           UIEvents.tokenExpired("simkl");
           return;
         }
-        console.error(simklLastActivity);
+        consoleerror(simklLastActivity)();
         UIEvents.connectFailed("simkl");
         return;
       }
-      console.debug(simklLastActivity);
+      consoledebug(simklLastActivity)();
       dates = {
         anime: simklLastActivity[MediaType.anime]["all"],
         movies: simklLastActivity[MediaType.movies]["all"],
         shows: simklLastActivity["tv_shows"]["all"], // is not shows but tv_shows
       };
     } else {
-      console.debug("Doing a full sync");
+      consoledebug("Doing a full sync")();
     }
 
     // get simkl history
-    console.debug(dates);
+    consoledebug(dates)();
     let {
       success,
       data: simklChanges,
@@ -255,19 +255,19 @@ const startBgSync = async (signal) => {
     );
     if (!success) {
       if (err instanceof DOMException) {
-        console.debug("User canceled sync");
+        consoledebug("User canceled sync")();
         return;
       }
       // TODO: sync failed, save error?
-      console.error(err);
+      consoleerror(err)();
       return;
     }
-    console.debug(simklChanges, serverTime);
+    consoledebug(simklChanges, serverTime)();
     UIEvents.connectDone("simkl");
 
     for (let mediaType of Object.keys(simklChanges)) {
       if (!!signal && signal.aborted) {
-        console.debug("User canceled sync");
+        consoledebug("User canceled sync")();
         return;
       }
       // mediaType ∈ {'anime', 'movies', 'shows'}
@@ -275,21 +275,21 @@ const startBgSync = async (signal) => {
         case MediaType.movies:
           for (let movie of simklChanges[mediaType]) {
             if (!movie.movie.ids) {
-              console.debug("Movie has no ids", movie);
+              consoledebug("Movie has no ids", movie)();
               continue;
             }
             let mPlexids = simklIdsToPlexIds(movie.movie, mediaType);
-            console.debug(mPlexids);
+            // consoledebug(mPlexids)();
             let plexMovie = mPlexids.map((id) => guidLut[id]).filter((m) => m);
             if (plexMovie.length > 0) {
-              console.debug("Movie was found in plex library", plexMovie);
+              consoledebug("Movie was found in plex library", plexMovie)();
               // return;
               // continue;
             } else {
-              // console.debug(
+              // consoledebug(
               //   "Movie was not found in plex library",
               //   movie.movie.ids.slug
-              // );
+              // )();
             }
             switch (movie.status) {
               case "completed":
@@ -305,7 +305,7 @@ const startBgSync = async (signal) => {
               default:
                 break;
             }
-            // console.debug(movie);
+            // consoledebug(movie)();
             // movie.status
             // movie.user_rating
             // movie.movie.ids.{imdb,tmdb,tvdb,tvdbslug}
@@ -315,7 +315,7 @@ const startBgSync = async (signal) => {
         case MediaType.shows:
           for (let show of simklChanges[mediaType]) {
             if (!show.show.ids) {
-              console.debug("Show has no ids", show);
+              consoledebug("Show has no ids", show)();
               continue;
             }
             switch (show.status) {
@@ -332,7 +332,7 @@ const startBgSync = async (signal) => {
               default:
                 break;
             }
-            // console.debug(show);
+            // consoledebug(show)();
             // show.status
             // show.user_rating
             // show.show.ids.{imdb,tmdb,tvdb,tvdbslug}
@@ -347,7 +347,7 @@ const startBgSync = async (signal) => {
           // let tvdbSlugsS = [];
           for (let anime of simklChanges[mediaType]) {
             if (!anime.show.ids) {
-              console.debug("Show has no ids", anime);
+              consoledebug("Show has no ids", anime)();
               continue;
             }
             // let keys = Object.keys(anime.show.ids);
@@ -369,7 +369,7 @@ const startBgSync = async (signal) => {
                 break;
             }
           }
-          // console.log(tvdbSlugsS);
+          // consolelog(tvdbSlugsS)();
           break;
         default:
           break;
@@ -379,7 +379,7 @@ const startBgSync = async (signal) => {
     let totalSyncCount = plexMediaList.reduce((accum, item) => {
       return accum + item.length;
     }, 0);
-    console.log("Total sync count", totalSyncCount);
+    consolelog("Total sync count", totalSyncCount)();
     // return;
 
     // TODOOOO: start sync
@@ -392,7 +392,7 @@ const startBgSync = async (signal) => {
     for (let mediaType of plexMediaList) {
       for (let _item of mediaType) {
         if (!!signal && signal.aborted) {
-          console.debug("User canceled sync");
+          consoledebug("User canceled sync")();
           return;
         }
         currentIdx++;
@@ -413,13 +413,13 @@ const startBgSync = async (signal) => {
       UIEvents.connectFailed("plex");
     }
     // one of the required things is missing
-    console.debug({
+    consoledebug({
       plexInstanceUrl,
       syncPeriod,
       plexOauthToken,
       simklOauthToken,
-    });
-    console.error("Unreachable");
+    })();
+    consoleerror("Unreachable")();
   }
 };
 
@@ -503,9 +503,9 @@ const fetchAniDBTvDBMappings = async (signal) => {
         ].join(",")
       );
     }
-    console.debug(ret);
+    consoledebug(ret)();
   } catch (error) {
-    console.error(error, typeof error);
+    consoleerror(error, typeof error)();
   }
 };
 
@@ -517,7 +517,7 @@ const plexDiscover = async () => {
     plexToken: plexOauthToken,
   });
   if (!servers) {
-    console.error(error);
+    consoleerror(error)();
     let message = {
       type: ActionType.action,
       action: ActionType.ui.sync.plex.unexpected,
@@ -528,9 +528,9 @@ const plexDiscover = async () => {
     plexOauthToken
   );
   if (!devices) {
-    console.error(error);
+    consoleerror(error)();
   }
-  console.debug(servers, devices);
+  consoledebug(servers, devices)();
 };
 
 const zipSimklLibrary = async () => {
@@ -539,14 +539,14 @@ const zipSimklLibrary = async () => {
   let webm = await (
     await fetch(chrome.runtime.getURL("assets/sample.webm"))
   ).blob();
-  console.log(webm);
+  consolelog(webm)();
   let zip = new JSZip();
   let moviesZ = zip.folder("Simkl Movies");
   moviesZ.file("{tmdb-634649}.webm", webm, { binary: true });
   let showsZ = zip.folder("Simkl TV Shows");
   let showDir = showsZ.folder("{tvdb-323168}");
   for (let eno = 0; eno < 10000; eno += 1) {
-    if (eno % 1000 == 0) console.debug("Added", eno, "files");
+    if (eno % 1000 == 0) consoledebug("Added", eno, "files")();
     showDir.file(`s01e${eno}.webm`, webm, { binary: true });
   }
   return zip;
@@ -554,7 +554,7 @@ const zipSimklLibrary = async () => {
 
 var saveZipFile = async (zip, type = "blob") => {
   const logLabel = `save_zip_${type}`;
-  console.time(logLabel);
+  consoletime(logLabel)();
   let donee = false;
   let blobdata = await zip.generateAsync(
     {
@@ -579,8 +579,8 @@ var saveZipFile = async (zip, type = "blob") => {
     }
   );
   // let endTime = performance.now();
-  // console.debug(`${endTime} ended ${type} zipping`);
-  // console.debug(`${type} took ${endTime - startTime} millisecs`);
-  console.timeEnd(logLabel);
+  // consoledebug(`${endTime} ended ${type} zipping`)();
+  // consoledebug(`${type} took ${endTime - startTime} millisecs`)();
+  consoletimeEnd(logLabel)();
   return blobdata;
 };

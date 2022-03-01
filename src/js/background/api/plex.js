@@ -33,7 +33,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   };
 
   const throwError = (err) => {
-    console.error(err);
+    consoleerror(err)();
     throw err;
   };
 
@@ -57,7 +57,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         plexOauthToken: null,
       });
       token = plexOauthToken;
-      console.debug("The saved plexOauthToken: " + token);
+      consoledebug("The saved plexOauthToken: " + token)();
       if (!token) {
         responseChannel({ authToken: null, valid: false });
         return;
@@ -188,7 +188,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   };
 
   const plexLoginURI = (plexPINcode) => {
-    console.debug(PlexRedirectURI);
+    consoledebug(PlexRedirectURI)();
     const authAppUrl =
       "https://app.plex.tv/auth#?" +
       stringify({
@@ -206,7 +206,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   const oauthStart = async (responseChannel, inPopup) => {
     let resp = { code: null, id: null };
     let { plexPinCode, plexPinID } = await chrome.storage.local.get();
-    console.debug("localStorage:", { plexPinCode, plexPinID });
+    consoledebug("localStorage:", { plexPinCode, plexPinID })();
     if (!!plexPinCode && !!plexPinID) {
       // oauth second step (after redirect)
       resp["code"] = plexPinCode;
@@ -216,7 +216,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       if (response == null) {
         return;
       }
-      console.debug("Plex authToken response:", response);
+      consoledebug("Plex authToken response:", response)();
       if ("errors" in response) {
         // TODO: this might be because pincode and pinid expired
         // they stayed in the local storage for too long
@@ -249,14 +249,14 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     });
 
     let oauthUrl = plexLoginURI(resp["code"]);
-    console.debug("Plex oauth URL:", oauthUrl);
+    consoledebug("Plex oauth URL:", oauthUrl)();
     if (inPopup) {
       // open url in new tab
       chrome.tabs.create({ url: oauthUrl });
     } else {
       // open url in same tab
       chrome.tabs.update({ url: oauthUrl }, () => {
-        chrome.runtime.lastError && console.error(chrome.runtime.lastError);
+        chrome.runtime.lastError && consoleerror(chrome.runtime.lastError)();
       });
     }
     return true;
@@ -279,7 +279,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       broadcastOnlineStatus();
       try {
         let data = await resp.json();
-        console.debug(data);
+        consoledebug(data)();
         if (!!data.MediaContainer && !!data.MediaContainer.Server) {
           return { servers: data.MediaContainer.Server, error: null };
         }
@@ -378,7 +378,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
               error: null,
             };
           }
-          console.debug(data);
+          consoledebug(data)();
           return { error: "unexpected", items: null };
         } catch (error) {
           // TODO: invalid json response
@@ -386,7 +386,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         }
       }
       // sync-error
-      console.debug(resp.status, await resp.text());
+      consoledebug(resp.status, await resp.text())();
       return { status: resp.status, error: "failed", items: null };
     } catch (error) {
       broadcastOnlineStatus(false);
@@ -438,10 +438,10 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       broadcastOnlineStatus();
       if (resp.status == 200) {
         let xml = await resp.text();
-        console.debug(txml.parse(xml));
+        consoledebug(txml.parse(xml))();
         return;
       }
-      console.debug(resp.status);
+      consoledebug(resp.status)();
     } catch (error) {
       broadcastOnlineStatus(false);
     }
@@ -464,10 +464,10 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       broadcastOnlineStatus();
       if (resp.status == 200) {
         let xml = await resp.text();
-        console.debug(txml.parse(xml));
+        consoledebug(txml.parse(xml))();
         return;
       }
-      console.debug(resp.status);
+      consoledebug(resp.status)();
     } catch (error) {
       broadcastOnlineStatus(false);
     }
@@ -549,11 +549,11 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     { plexToken, plexApiBaseURL, plexRatingKey, info },
     markUnwatched = false
   ) => {
-    console.log(
+    consolelog(
       `Marking ${info.type} ${info.name} with key ${plexRatingKey}: ${
         markUnwatched ? "un" : ""
       }watched`
-    );
+    )();
     return;
     try {
       let resp = await fetch(
@@ -571,7 +571,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       ).catch(throwError);
       broadcastOnlineStatus();
       if (resp.status == 200) {
-        console.debug(await resp.text());
+        consoledebug(await resp.text())();
       }
     } catch (error) {
       broadcastOnlineStatus(false);
@@ -704,10 +704,10 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         let data = await resp.json();
         return data.MediaContainer.Metadata[0].key;
       }
-      console.debug(resp.status, await resp.text());
+      consoledebug(resp.status, await resp.text())();
       return null;
     } catch (error) {
-      console.error(error);
+      consoleerror(error)();
       return null;
     }
   };
@@ -729,10 +729,10 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         let data = await resp.json();
         return data.MediaContainer.Metadata[0].key;
       }
-      console.debug(resp.status, await resp.text());
+      consoledebug(resp.status, await resp.text())();
       return null;
     } catch (error) {
-      console.error(error);
+      consoleerror(error)();
       return null;
     }
   };
@@ -796,7 +796,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       try {
         let xml = await resp.text();
         let xmlData = txml.parse(xml);
-        console.debug(xmlData);
+        consoledebug(xmlData)();
         let agents = xmlData[1].children
           .filter((c) => c.tagName == "Agent")
           .map((c) => c.attributes.identifier);
@@ -814,7 +814,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       }
     } catch (error) {
       broadcastOnlineStatus(false);
-      console.error(error);
+      consoleerror(error)();
       return {
         status: null,
         error,

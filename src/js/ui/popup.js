@@ -6,7 +6,7 @@ const restartLibrarySync = async (
     durationHours = DefaultSyncPeriod;
   }
   if (await isSyncEnabled()) stopLibrarySync();
-  console.debug("Starting library sync, duration", durationHours, "hrs");
+  consoledebug("Starting library sync, duration", durationHours, "hrs")();
   chrome.alarms.create(AlarmKey, {
     when: runImmediately
       ? Date.now() + 100
@@ -17,7 +17,7 @@ const restartLibrarySync = async (
 };
 
 const stopLibrarySync = () => {
-  console.debug("Stopping any running library sync");
+  consoledebug("Stopping any running library sync")();
   chrome.alarms.clear(AlarmKey);
   let message = {
     type: CallType.call,
@@ -82,7 +82,7 @@ const handleHashRoutes = async () => {
     let { allowedOrigins } = await chrome.storage.local.get({
       allowedOrigins: [],
     });
-    console.debug("Allowed origins", allowedOrigins);
+    consoledebug("Allowed origins", allowedOrigins)();
     if (allowedOrigins.includes(plexUrl.originUrl())) {
       return;
     }
@@ -107,9 +107,9 @@ const handleHashRoutes = async () => {
   }
   if (permPromptFollowup) {
     // not required as not using chrome.tabs.update here
-    // if (chromeTabsUpdateBugVerCheck()) {
+    // if (await chromeTabsUpdateBugVerCheck()) {
     //   let t = await chrome.tabs.getCurrent();
-    //   console.debug("Chrome tabs update bug is applicable: closing tab", t);
+    //   consoledebug("Chrome tabs update bug is applicable: closing tab", t)();
     //   await chrome.tabs.remove(t.id);
     // }
   }
@@ -121,10 +121,10 @@ const renewOrginPerms = async (oldPlexUrl, normalizedUrl) => {
   if (!oldPlexUrl || oldPlexUrl.originUrl() != normalizedUrl.originUrl()) {
     // url was modified while sync was running
     // remove permissions for old url
-    console.debug(
+    consoledebug(
       oldPlexUrl && oldPlexUrl.originUrl(),
       normalizedUrl.originUrl()
-    );
+    )();
     await removePlexURIPermissions(oldPlexUrl);
     await requestPlexURIPermissions(normalizedUrl);
   }
@@ -132,7 +132,7 @@ const renewOrginPerms = async (oldPlexUrl, normalizedUrl) => {
 
 const removePlexURIPermissions = async (plexUrl) => {
   if (!plexUrl) return;
-  console.debug("Removing origin permissions for", plexUrl);
+  consoledebug("Removing origin permissions for", plexUrl)();
   let { allowedOrigins } = await chrome.storage.local.get({
     allowedOrigins: [],
   });
@@ -152,7 +152,7 @@ const requestPlexURIPermissions = async (plexUrl) => {
       allowed = await chrome.permissions.request({
         origins: [plexUrl.originUrl()],
       });
-      console.debug("Allowed?", allowed);
+      consoledebug("Allowed?", allowed)();
     } catch (error) {
       await iosAlert(`Invalid Url: ${plexUrl}\n${error}`);
     }
@@ -289,7 +289,7 @@ const onLoad = async () => {
     let { plexOauthToken } = await chrome.storage.sync.get({
       plexOauthToken: null,
     });
-    console.debug(`plexOauthToken is: ${plexOauthToken}`);
+    consoledebug(`plexOauthToken is: ${plexOauthToken}`)();
     if (!plexOauthToken) {
       startPlexOauth();
     } else {
@@ -300,7 +300,7 @@ const onLoad = async () => {
     let { simklOauthToken } = await chrome.storage.sync.get({
       simklOauthToken: null,
     });
-    console.debug(`simklOauthToken is: ${simklOauthToken}`);
+    consoledebug(`simklOauthToken is: ${simklOauthToken}`)();
     if (!simklOauthToken) {
       startSimklOauth();
     } else {
@@ -359,7 +359,7 @@ const onLoad = async () => {
       return;
     }
     // Force sync
-    console.debug("starting syncing manually before next scheduled sync");
+    consoledebug("starting syncing manually before next scheduled sync")();
     let message = {
       type: CallType.call,
       method: CallType.bg.sync.start,
@@ -399,7 +399,7 @@ window.addEventListener("resize", uiHandleBackgroundImg);
 // Registering UI event handlers (actions)
 
 chrome.runtime.onMessage.addListener(async (message, sender) => {
-  // console.debug("Got message:", message, "from:", sender);
+  // consoledebug("Got message:", message, "from:", sender)();
   switch (message.type) {
     case ActionType.action:
       switch (message.action) {
@@ -501,7 +501,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
           startNextSyncTimer();
           break;
         default:
-          console.debug("Unknown action", message);
+          consoledebug("Unknown action", message)();
       }
       break;
     case CallType.call:
@@ -509,7 +509,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
       break;
 
     default:
-      console.debug("Unknown message type", message);
+      consoledebug("Unknown message type", message)();
   }
   // required if we don't use sendResponse
   return true;

@@ -30,7 +30,7 @@ const finishLogoutSimkl = (_message) => {
 };
 
 const startSimklOauth = () => {
-  console.debug("Starting simkl authentication flow");
+  consoledebug("Starting simkl authentication flow")();
   chrome.runtime.sendMessage(
     {
       type: CallType.call,
@@ -61,7 +61,7 @@ const finishSimklOauth = (message) => {
   }
   // TODO: simkl oauth finish show any errors
   // Something like `setUIErrorMessage(message.error)` ?
-  console.debug(message);
+  consoledebug(message)();
 };
 
 const checkSimklAuthTokenValidity = () => {
@@ -85,7 +85,7 @@ const checkSimklAuthTokenValidity = () => {
         // Show login prompt again
         // with message describing that the old session expired
         logoutSimkl();
-        console.debug(response);
+        consoledebug(response)();
       }
     }
   );

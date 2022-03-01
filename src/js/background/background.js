@@ -82,7 +82,7 @@ importScripts("./api/simkl.js");
 importScripts("../common.js");
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  // console.debug("[SW] Got message:", message, "from:", sender);
+  // consoledebug("[SW] Got message:", message, "from:", sender)();
   switch (message.type) {
     case CallType.call:
       switch (message.method) {
@@ -123,7 +123,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           __API__.plex.apis.getBgUrl(message, sendResponse, message.portrait);
           return true;
         default:
-          console.debug("Unknown message method", message);
+          consoledebug("Unknown message method", message)();
           break;
       }
       break;
@@ -132,7 +132,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       // all instances of popup.js
       break;
     default:
-      console.debug("Unknown message type", message.type);
+      consoledebug("Unknown message type", message.type)();
       break;
   }
   return true;
@@ -157,7 +157,7 @@ const handleOauthIntercepts = async ({ tabId, url }) => {
     await chrome.tabs.reload(tabId);
     let parts = url.split("?");
     let simklPinCode = parts[parts.length - 1].split("=")[1];
-    console.debug(`Got pincode for simkl: ${simklPinCode}`);
+    consoledebug(`Got pincode for simkl: ${simklPinCode}`)();
     chrome.storage.local.set({
       simklPinCode: simklPinCode,
     });
@@ -166,8 +166,8 @@ const handleOauthIntercepts = async ({ tabId, url }) => {
 
 chrome.webRequest.onBeforeRequest.addListener(
   (details) => {
-    console.debug("On Before request");
-    console.debug(details);
+    consoledebug("On Before request")();
+    consoledebug(details)();
     handleOauthIntercepts(details);
   },
   {
