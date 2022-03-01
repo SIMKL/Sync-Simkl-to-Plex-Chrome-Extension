@@ -127,9 +127,9 @@ This document describes the development workflow that went into this project.
       ```
     - [ ] auto generate above script at build time
       - using github actions and repo secrets
-  - [ ] Api calls
-    - [ ] finalize plex api calls
-      - [ ] Plex network sniff
+  - [x] Api calls
+    - [x] finalize plex api calls
+      - [x] Plex network sniff
       - Cors blocked for local plex instances
         - To unblock cors
           - https://stackoverflow.com/a/67646077
@@ -138,7 +138,7 @@ This document describes the development workflow that went into this project.
       - Useful resources:
         - [gist](https://gist.github.com/philipjewell/2b721ccde6f251f67454dd04829cef4b) gets user's plex clients (outdated)
           - new way is `&X-Plex-Token` and `https://plex.tv/devices.xml`
-    - [ ] finalize simkl api calls
+    - [x] finalize simkl api calls
   - Added show/hide animations for sync-form element depending on whether both services are logged in.
   - Discussed about how to handle settings changes.
     - @masyk suggested, if url input changes stop sync automatically
@@ -156,8 +156,8 @@ This document describes the development workflow that went into this project.
 #### `10/2/2022-14/2/2022`
 
 - `@phanirithvij`
-  - [ ] Sync done
-    - [ ] Error handling for UI
+  - [x] Sync done
+    - [x] Error handling for UI
     - [ ] Content matching by episode, season, show, movie
       - Simkl returns ...
   - TODO: Show a warning message before user starts syncing for the very first time that their plex library must be perfectly organized and each movie/show/season/episode needs to be recognized by plex as something. If the episodes and seasons recognized are erroneous then syncing will be erroneous.
@@ -286,7 +286,7 @@ This document describes the development workflow that went into this project.
 
 #### `1/3/2022`
 
-- `@phanirithvij`
+- `@phanirithvij` (7 hours total)
   - Implemented a basic remote logging service to debug service worker lifecycle requests in the middle of syncing.
     - If sync takes > 5 mins we need to split the work.
     - This limit should not exist for extension service workers but it is unreasonable to expect google will fix any bugs related to chrome. [related article](https://www.eff.org/deeplinks/2021/12/chrome-users-beware-manifest-v3-deceitful-and-threatening)
@@ -300,6 +300,19 @@ This document describes the development workflow that went into this project.
       - https://crbug.com/1175696
       - https://stackoverflow.com/q/46348907
       - https://stackoverflow.com/q/57348446
+    - Snitch todos with a seperate issue repo
+      - This is the `.gitconfig`
+        ```gitconfig
+        [remote "bugs"]
+          url = https://github.com/phanirithvij/sample_snitch_testbed.git
+          fetch = +refs/heads/*:refs/remotes/bugs/*
+        [remote "origin"]
+          url = https://github.com/phanirithvij/Sync-Simkl-to-Plex-Chome-Extension.git
+          fetch = +refs/heads/*:refs/remotes/origin/*
+        [remote "upstream"]
+          url = https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension.git
+          fetch = +refs/heads/*:refs/remotes/upstream/*
+        ```
 
 #### Notes (`@phanirithvij`)
 

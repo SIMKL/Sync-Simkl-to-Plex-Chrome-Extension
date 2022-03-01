@@ -10,5 +10,11 @@
 			"path": "./scripts/logger"
 		},
 	],
-	"settings": {}
+	"settings": {},
+	"extensions": {
+		"recommendations": [
+			"golang.go",
+			"redhat.vscode-yaml"
+		]
+	}
 }
