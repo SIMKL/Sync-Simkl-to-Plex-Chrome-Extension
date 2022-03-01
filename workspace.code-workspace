@@ -4,7 +4,7 @@
 			"path": "."
 		},
 		{
-			"path": "./scripts/plex"
+			"path": "./scripts/mockplex"
 		},
 		{
 			"path": "./scripts/logger"
