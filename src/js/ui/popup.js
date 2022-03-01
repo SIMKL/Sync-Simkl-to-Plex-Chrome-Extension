@@ -118,16 +118,20 @@ const handleHashRoutes = async () => {
 // Orgin permission handling
 
 const renewOrginPerms = async (oldPlexUrl, normalizedUrl) => {
-  if (oldPlexUrl.originUrl() != normalizedUrl.originUrl()) {
+  if (!oldPlexUrl || oldPlexUrl.originUrl() != normalizedUrl.originUrl()) {
     // url was modified while sync was running
     // remove permissions for old url
-    console.debug(oldPlexUrl.originUrl(), normalizedUrl.originUrl());
+    console.debug(
+      oldPlexUrl && oldPlexUrl.originUrl(),
+      normalizedUrl.originUrl()
+    );
     await removePlexURIPermissions(oldPlexUrl);
     await requestPlexURIPermissions(normalizedUrl);
   }
 };
 
 const removePlexURIPermissions = async (plexUrl) => {
+  if (!plexUrl) return;
   console.debug("Removing origin permissions for", plexUrl);
   let { allowedOrigins } = await chrome.storage.local.get({
     allowedOrigins: [],
@@ -514,6 +518,8 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
 const startNextSyncTimer = async () => {
   let signal = null;
   if (!!window.timerAbortC) {
+    // TODO: to comibne multiple signals
+    // https://github.com/whatwg/fetch/issues/905#issuecomment-491970649
     window.timerAbortC.abort();
     window.timerAbortC = null;
   }

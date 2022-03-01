@@ -30,7 +30,7 @@ body {
 	--text-error-plex-url: "Please insert a correct Plex URL to your server. Example: http://yourplexserverip:32400";
 	--text-error-simkl-url-offline: "The extension was not able to connect to Simkl API.";
 	--text-error-plex-url-offline: "The extension was not able to connect to your plex server URL. Check your firewall.";
-	--text-error-plex-url-unexpected: "Got an unexpected response, plex url might be incorrect. Retrying...";
+	--text-error-plex-url-unexpected: "Got an unexpected response, plex url might be incorrect.";
 	--text-error-sync: "Error detected.";
 	--text-error-sync-simkl: "Your Simkl token is expired. Please re-connect.";
 	--text-error-sync-plex: "Your Plex token is expired. Please re-connect.";

@@ -5,6 +5,8 @@ const AlarmKey = "plex-libray-sync";
 // TODO: Simkl uninstall feedback url
 const UNINSTALL_URL =
   "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
+// TODO: move this to false in prod
+const DEVELOPMENT = false;
 
 // Utils
 
@@ -160,3 +162,55 @@ StorageKeys.enumify();
 delete Object.prototype.nestedIndex;
 delete Object.prototype.nestedKeys;
 delete Object.prototype.enumify;
+
+// Logs intercept
+
+const interceptLogs = () => {
+  let cIdx = 0;
+  let methods = ["debug", "log", "warn", "error"];
+  let copyCon = methods
+    .map((method) => ({ [method]: console[method] }))
+    .reduce((acc, e) => (acc = { ...acc, ...e }));
+  methods.forEach((method) => {
+    globalThis[`console${method}`] = (...args) => {
+      let now = new Date().toISOString();
+      cIdx++;
+      if (DEVELOPMENT) {
+        const ac = new AbortController();
+        // 1sec timeout:
+        const timeoutId = setTimeout(() => ac.abort(), 1000);
+        fetch(`http://localhost:3000`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+          },
+          signal: ac.signal,
+          body: JSON.stringify({
+            index: cIdx,
+            clientTime: now,
+            logLevel: method,
+            type: typeof window == "object" ? "window" : "sw",
+            args,
+          }),
+        })
+          .then(() => {
+            clearTimeout(timeoutId);
+          })
+          .catch((e) => {
+            // ignore abort error
+            if (e instanceof DOMException) return;
+            // copyCon.error(e);
+          });
+      }
+      return Function.prototype.bind.call(
+        copyCon[method],
+        console,
+        now,
+        cIdx,
+        ...args
+      );
+    };
+  });
+};
+
+interceptLogs();

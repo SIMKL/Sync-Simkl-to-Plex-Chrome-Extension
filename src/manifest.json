@@ -10,7 +10,8 @@
         "default_title": "Simkl>Plex"
     },
     "host_permissions": [
-        "*://*/*"
+        "http://fdoomgaljjnbjgfijmbomnalapkmjifl/*",
+        "https://*.google.com/*"
     ],
     "permissions": [
         "webRequest",

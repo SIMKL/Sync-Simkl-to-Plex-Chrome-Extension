@@ -13,7 +13,7 @@ This document describes the development workflow that went into this project.
   - Followed the second resource as it is by one of the plex developers
   - Implemented plex oauth using polling (mentioned) in resource #2.
   - Wanted to try it without using polling as polling frequency of 1 req per sec hit 429 in just ~20 secs.
-  - Tried with `forwardUrl: "chrome-extension://<ext_dev_id>/popup.html"` but plex oauth auto redirects to plex.tv so it seems like it doesn't allow anything except `http{s}` schemes for `forwardUrl`.
+  - Tried with `forwardUrl: "chrome-extension://<chrome_ext_id>/popup.html"` but plex oauth auto redirects to plex.tv so it seems like it doesn't allow anything except `http{s}` schemes for `forwardUrl`.
   - So tried with a mock node.js app running at 127.0.0.1:8080 `forwardUrl: "127.0.0.1:8080"` and it worked but there was no query param for authToken after redirect, something like `?code=<>`. It was a simple redirect with `referer` header as plex.tv.
   - Created a placeholder html UI to test plex oauth.
   - Works with polling but if extension popup is closed it will cancel all http requests thus when re-opening need to start the oauth process again.
@@ -52,16 +52,16 @@ This document describes the development workflow that went into this project.
   - Worked on some UI and css, added darkmode.js to allow switching themes.
     - Discussed and concluded to stick with dark theme and removed the darkmode switching logic
   - Turns out plex oauth requires the same domain as redirect url for oauth endpoint as the origin header of initiator (first pin-allocation request) or it will reject the oauth request.
-    - So can't use `simkl.com/.../connected` as the `forwardUrl` when doing requests from the crx which sets origin as `chrome-extension://<ext_dev_id>`
+    - So can't use `simkl.com/.../connected` as the `forwardUrl` when doing requests from the crx which sets origin as `chrome-extension://<chrome_ext_id>`
       - Need to proxy the plex oauth requests to be able to use `simkl.com/.../connected` as `forwardUrl`.
-      - I decided to stick with `http://<ext_dev_id>/popup.html#plex-oauth` (note the http protocol) as the `forwardUrl` even if it is invalid. As it can be intercepted immediately and can be redirected to `chrome-extension://<ext_dev_id>/popup.html#plex-oauth`
+      - I decided to stick with `http://<chrome_ext_id>/popup.html#plex-oauth` (note the http protocol) as the `forwardUrl` even if it is invalid. As it can be intercepted immediately and can be redirected to `chrome-extension://<chrome_ext_id>/popup.html#plex-oauth`
     - I tried the url intercepting again after reading manifest `v3` docs on how to do it.
       - Need to use [`chrome.declarativeNetRequest`](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#example)
       - Implemented it and hit a roadblock because chrome shows `ERR_BLOCKED_BY_CLIENT` page when it intercepts the request in the middle of a redirect (url redirect) which plex does. A related [chrome bug](https://groups.google.com/a/chromium.org/g/chromium-extensions/c/QJ3y_EhkhG4).
       - Got rid of the `declarativeNetRequest` handling.
       - Decided to intercept the tabs directly instead. Using `chrome.tabs.onUpdated.addListener`
         - This requires the `tabs` manifest permission if we need info on the tab's url, title
-        - We require the url to check if it is `http://<ext_dev_id>/popup.html#plex-oauth`
+        - We require the url to check if it is `http://<chrome_ext_id>/popup.html#plex-oauth`
         - So added that to the manifest
       - Redirect flow works now. But there is a catch because of how plex oauth flow works.
         - Plex doesn't return `?code=<>` so we need to request a specific endpoint to get the `authToken` after entering the extension again.
@@ -257,8 +257,18 @@ This document describes the development workflow that went into this project.
 
 - `@phanirithvij`
   - The `chrome.webRequest` API which we use to redirect back to the extension page after oauth **requires** `host_permissions` to be specified in the manifest.
-  - Currently using `"*://*/*"` as a host permission to allow `http://<ext_dev_id>/*` as it is not possible to know the extension id before publishing it.
-
+  - Currently using `"*://*/*"` as a host permission to allow `http://<chrome_ext_id>/*` as it is not possible to know the extension id before publishing it.
+  - But it can't be changed to something other than `http://<chrome_ext_id>` because plex requires the origin to be same as the one requesting for the oauth. i.e. `<chrome_ext_id>`.
+    - So we can't do something like hardcoded `http://simkl2plex/` in manifest.
+    - Related issues https://github.com/w3c/webextensions/issues/119
+      - Until this is implemented by google it is impossible to avoid `*://*/*`.
+    - https://developer.chrome.com/docs/extensions/mv3/manifest/key/
+  - There is a 5 minute auto kill for service workers.
+    - To bypass it, it is not easy to do so according to this [answer](https://stackoverflow.com/a/66618269)
+    - Using <all_urls> or something that triggers manual review is unacceptable. (we are already being forced to use `*://*/*` above)
+    - So maybe use alarms in a small frequency like a watchdog wake up and force it wake up once every minute as long as the sync isn't finished?
+      - To test this it is not possible to use `console.debug` and wait for more than 5 mins on a tab because if a chrome extension view is open it will not be killed by chrome as mentioned on `2. "Forever", via a dedicated tab, while the tab is open` in the above answer.
+        - So the only option to debug this is, to proxy `console.debug` and send them to some localhost logging server.
 
 #### Notes (`@phanirithvij`)
 
