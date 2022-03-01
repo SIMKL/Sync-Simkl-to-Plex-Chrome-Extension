@@ -256,6 +256,15 @@ This document describes the development workflow that went into this project.
 #### `28/2/2022`
 
 - `@phanirithvij`
+  - Only domains listed in `host_permissions` can make cors requests ignoring cors headers.
+    - But plex.tv has cors enabled always, [related article](https://www.tenable.com/security/research/tra-2020-35)
+    - All plex server endpoints also allow cors to the requested origin. i.e. `chrome-extension://<chrome_ext_id>` in our case.
+      - plex server returns `Access-Control-Allow-Origin: chrome-extension://<chrome_ext_id>`
+    - This calls for not requesting permissions for resources which allow cors.
+      - TODO: send a request to the provided plex server endpoint
+      - If cors is enabled, the don't request permission for that origin.
+      - If not, show user an error that the provided plex server has cors disabled. So it is not possible to send requests to it. If this case ever arises then we should use `*://*/*` as an optional host permission and request permissions.
+      - [ ] Thus following the above permission request for plex origins and related needs to be removed.
   - The `chrome.webRequest` API which we use to redirect back to the extension page after oauth **requires** `host_permissions` to be specified in the manifest.
   - Currently using `"*://*/*"` as a host permission to allow `http://<chrome_ext_id>/*` as it is not possible to know the extension id before publishing it.
   - But it can't be changed to something other than `http://<chrome_ext_id>` because plex requires the origin to be same as the one requesting for the oauth. i.e. `<chrome_ext_id>`.
@@ -263,12 +272,34 @@ This document describes the development workflow that went into this project.
     - Related issues https://github.com/w3c/webextensions/issues/119
       - Until this is implemented by google it is impossible to avoid `*://*/*`.
     - https://developer.chrome.com/docs/extensions/mv3/manifest/key/
+    - Optional host permissions is a feature request which is in limbo
+      - https://groups.google.com/a/chromium.org/g/chromium-extensions/c/EnUmtHWOI9o
+      - https://crbug.com/1265064
+      - https://crbug.com/1152255
+      - https://gist.github.com/guest271314/74f35ff0a1271592d6f7e3cf792b357f
   - There is a 5 minute auto kill for service workers.
     - To bypass it, it is not easy to do so according to this [answer](https://stackoverflow.com/a/66618269)
     - Using <all_urls> or something that triggers manual review is unacceptable. (we are already being forced to use `*://*/*` above)
     - So maybe use alarms in a small frequency like a watchdog wake up and force it wake up once every minute as long as the sync isn't finished?
       - To test this it is not possible to use `console.debug` and wait for more than 5 mins on a tab because if a chrome extension view is open it will not be killed by chrome as mentioned on `2. "Forever", via a dedicated tab, while the tab is open` in the above answer.
         - So the only option to debug this is, to proxy `console.debug` and send them to some localhost logging server.
+
+#### `1/3/2022`
+
+- `@phanirithvij`
+  - Implemented a basic remote logging service to debug service worker lifecycle requests in the middle of syncing.
+    - If sync takes > 5 mins we need to split the work.
+    - This limit should not exist for extension service workers but it is unreasonable to expect google will fix any bugs related to chrome. [related article](https://www.eff.org/deeplinks/2021/12/chrome-users-beware-manifest-v3-deceitful-and-threatening)
+  - Service workers have many bugs, and we are hitting one of them when checking for token validity
+    - Plex oauth button will stay as not connected because when two `chrome.runtime.sendMessage` calls are issued immediately one of them is not firing.
+    - Made some changes to avoid this buy forcefully synchronizing the requests.
+    - And removed responseChannel (sendResponse) usage but using bidirectional message passing instead.
+    - To debug service worker state chrome://serviceworker-internals/
+    - Related questions on stackoverflow and crbugs
+      - https://stackoverflow.com/q/66031376
+      - https://crbug.com/1175696
+      - https://stackoverflow.com/q/46348907
+      - https://stackoverflow.com/q/57348446
 
 #### Notes (`@phanirithvij`)
 

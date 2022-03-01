@@ -97,13 +97,14 @@ const handleHashRoutes = async () => {
     startPlexOauth();
   } else {
     // request service worker to validate and save plex oauth token
-    checkPlexAuthTokenValidity();
+    await checkPlexAuthTokenValidity();
   }
   if (loginType == "simkl") {
     startSimklOauth();
   } else {
     // request service worker to validate and save simkl oauth token
-    checkSimklAuthTokenValidity();
+    // checkSimklAuthTokenValidity();
+    await checkSimklAuthTokenValidity();
   }
   if (permPromptFollowup) {
     // not required as not using chrome.tabs.update here
@@ -406,6 +407,20 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
         case ActionType.oauth.plex.login:
           finishPlexOauth(message);
           break;
+        case ActionType.oauth.plex.loginCheck:
+          // consoledebug(message)();
+          var { authToken, valid } = message;
+          if (valid) {
+            // set plex button ui accordingly
+            setUIPlexConnected();
+            savePlexAuthToken(authToken);
+          } else {
+            // TODO: show login prompt
+            // with message describing that the old session expired
+            logoutPlex();
+            consoledebug(response)();
+          }
+          break;
         case ActionType.oauth.plex.logout:
           finishLogoutPlex(message);
           uiSyncDisabled();
@@ -413,6 +428,21 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
           break;
         case ActionType.oauth.simkl.login:
           finishSimklOauth(message);
+          break;
+        case ActionType.oauth.simkl.loginCheck:
+          // consoledebug(message)();
+          var { authToken, valid } = message;
+          if (valid) {
+            // set simkl button ui accordingly
+            setUISimklConnected();
+            saveSimklAuthToken(authToken);
+          } else {
+            // TODO: simkl auth_token revoked handle ux
+            // Show login prompt again
+            // with message describing that the old session expired
+            logoutSimkl();
+            consoledebug(response)();
+          }
           break;
         case ActionType.oauth.simkl.logout:
           uiSyncDisabled();
@@ -484,7 +514,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
           stopLibrarySync();
           break;
         case ActionType.ui.sync.progress:
-          // TODO: handle earch progress item
+          // handle earch progress item
           if (message.value <= 0) {
             return;
           }

@@ -5,7 +5,7 @@ self.addEventListener("install", () => {
   // Skip over the "waiting" lifecycle state, to ensure that our
   // new service worker is activated immediately, even if there's
   // another tab open controlled by our older service worker code.
-  self.skipWaiting();
+  setTimeout(self.skipWaiting, 100);
 });
 
 // https://www.npmjs.com/package/txml/v/5.1.1
@@ -15,52 +15,43 @@ importScripts("../vendor/txml@5.1.1.min.js");
 
 // Api methods to use globally
 
-// TODO: remove these after migrating to typescript
-// or after done developing with this part
-// these solely exist for IDE auto completions
-const n_1 = (_) => {};
-const n_2 = (_, __) => {};
-const _1 = async (_) => {};
-const _2 = async (_, __) => {};
-const _3 = async (_, __, _x) => {};
-
+let f = () => {};
 // this structure is required
-// but _1, _2, n_1, n_2, etc. can be replaced with null.
 let __API__ = {
   plex: {
     oauth: {
-      oauthStart: _2,
-      checkTokenValiditiy: _2,
-      getAuthToken: _2,
+      oauthStart: f,
+      checkTokenValiditiy: f,
+      getAuthToken: f,
     },
     apis: {
-      getLocalServers: _1,
-      getUserDevices: _1,
-      getLibrarySections: _1,
-      getLibrarySectionAll: _1,
-      healthCheck: _1,
-      getUserProfiles: _1,
-      getUserProfileInfo: _1,
-      markEpisodeWatched: _2,
-      markSeasonWatched: _2,
-      markShowWatched: _2,
-      markMovieWatched: _2,
-      lookupItemByGuid: _1,
-      plexThumbURL: n_1,
-      getArtWorks: _1,
-      getPosters: _1,
-      installedPlexAgents: _2,
+      getLocalServers: f,
+      getUserDevices: f,
+      getLibrarySections: f,
+      getLibrarySectionAll: f,
+      healthCheck: f,
+      getUserProfiles: f,
+      getUserProfileInfo: f,
+      markEpisodeWatched: f,
+      markSeasonWatched: f,
+      markShowWatched: f,
+      markMovieWatched: f,
+      lookupItemByGuid: f,
+      plexThumbURL: f,
+      getArtWorks: f,
+      getPosters: f,
+      installedPlexAgents: f,
     },
   },
   simkl: {
     oauth: {
-      oauthStart: _2,
-      checkTokenValiditiy: _2,
+      oauthStart: f,
+      checkTokenValiditiy: f,
     },
     apis: {
-      getLastActivity: _2,
-      getAllItems: _3,
-      getUserInfo: _1,
+      getLastActivity: f,
+      getAllItems: f,
+      getUserInfo: f,
     },
   },
 };
@@ -81,8 +72,8 @@ importScripts("./api/simkl.js");
 // for any connected clients to use
 importScripts("../common.js");
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  // consoledebug("[SW] Got message:", message, "from:", sender)();
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  consoledebug("[SW] Got message:", message, "from:", sender)();
   switch (message.type) {
     case CallType.call:
       switch (message.method) {
@@ -92,14 +83,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           // https://stackoverflow.com/a/57608759
           return true;
         case CallType.oauth.plex.checkTokenValiditiy:
-          __API__.plex.oauth.checkTokenValiditiy(sendResponse, message.token);
+          consoledebug("[SW] Got message for token validation:", message)();
+          __API__.plex.oauth.checkTokenValiditiy(null, message.token);
           return true;
         case CallType.oauth.simkl.oauthStart:
           __API__.simkl.oauth.oauthStart(sendResponse, message.inPopup);
           // https://stackoverflow.com/a/57608759
           return true;
         case CallType.oauth.simkl.checkTokenValiditiy:
-          __API__.simkl.oauth.checkTokenValiditiy(sendResponse, message.token);
+          __API__.simkl.oauth.checkTokenValiditiy(null, message.token);
           return true;
 
         // bg handlers

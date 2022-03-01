@@ -6,8 +6,8 @@ const AlarmKey = "plex-libray-sync";
 const UNINSTALL_URL =
   "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
 // TODO: move this to false in prod
-const DEVELOPMENT = true;
-// const DEVELOPMENT = false;
+// const DEVELOPMENT = true;
+const DEVELOPMENT = false;
 
 // Utils
 
@@ -113,8 +113,8 @@ const CallType = {
 const ActionType = {
   action: "",
   oauth: {
-    plex: { login: "", logout: "" },
-    simkl: { login: "", logout: "" },
+    plex: { login: "", logout: "", loginCheck: "" },
+    simkl: { login: "", logout: "", loginCheck: "" },
   },
   ui: {
     sync: {
@@ -174,9 +174,9 @@ const interceptLogs = () => {
     .reduce((acc, e) => (acc = { ...acc, ...e }));
   methods.forEach((method) => {
     globalThis[`console${method}`] = (...args) => {
-      let now = new Date().toISOString();
-      cIdx++;
       if (DEVELOPMENT) {
+        let now = new Date().toISOString();
+        cIdx++;
         const ac = new AbortController();
         // 1sec timeout:
         const timeoutId = setTimeout(() => ac.abort(), 400);

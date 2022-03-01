@@ -64,31 +64,15 @@ const finishSimklOauth = (message) => {
   consoledebug(message)();
 };
 
-const checkSimklAuthTokenValidity = () => {
+const checkSimklAuthTokenValidity = async () => {
   // Gets simklOauthToken from chrome.storage.sync
   // Checks whether it's valid and request user to login again if not
 
   // Note: broadcasting to other connected views is not needed for this
-  chrome.runtime.sendMessage(
-    {
-      type: CallType.call,
-      method: CallType.oauth.simkl.checkTokenValiditiy,
-    },
-    (response) => {
-      const { authToken, valid } = response;
-      if (valid) {
-        // set simkl button ui accordingly
-        setUISimklConnected();
-        saveSimklAuthToken(authToken);
-      } else {
-        // TODO: simkl auth_token revoked handle ux
-        // Show login prompt again
-        // with message describing that the old session expired
-        logoutSimkl();
-        consoledebug(response)();
-      }
-    }
-  );
+  await chrome.runtime.sendMessage({
+    type: CallType.call,
+    method: CallType.oauth.simkl.checkTokenValiditiy,
+  });
 };
 
 // })();

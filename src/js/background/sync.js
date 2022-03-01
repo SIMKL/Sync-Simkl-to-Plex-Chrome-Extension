@@ -75,6 +75,10 @@ const userConfig = async () => {
   };
 };
 
+const plexLibraryShowsLut = async () => {
+  
+};
+
 const plexLibraryGuidLut = async (fullList, pconf) => {
   let guidLut = {};
   let unknownGuidList = [];
@@ -141,6 +145,8 @@ const plexLibraryGuidLut = async (fullList, pconf) => {
           // TODO: maybe plex instance is offline
           consoleerror(pErr)();
         } else unknownGuidList.push(item.guid);
+      } else {
+        consoledebug("No Guid or guid for item", item)();
       }
     })
   );
@@ -265,142 +271,196 @@ const startBgSync = async (signal) => {
     consoledebug(simklChanges, serverTime)();
     UIEvents.connectDone("simkl");
 
-    for (let mediaType of Object.keys(simklChanges)) {
-      if (!!signal && signal.aborted) {
-        consoledebug("User canceled sync")();
-        return;
-      }
-      // mediaType ∈ {'anime', 'movies', 'shows'}
-      switch (mediaType) {
-        case MediaType.movies:
-          for (let movie of simklChanges[mediaType]) {
-            if (!movie.movie.ids) {
-              consoledebug("Movie has no ids", movie)();
-              continue;
-            }
-            let mPlexids = simklIdsToPlexIds(movie.movie, mediaType);
-            // consoledebug(mPlexids)();
-            let plexMovie = mPlexids.map((id) => guidLut[id]).filter((m) => m);
-            if (plexMovie.length > 0) {
-              consoledebug("Movie was found in plex library", plexMovie)();
-              // return;
-              // continue;
-            } else {
-              // consoledebug(
-              //   "Movie was not found in plex library",
-              //   movie.movie.ids.slug
-              // )();
-            }
-            switch (movie.status) {
-              case "completed":
-                // await __API__.plex.apis.markMovieWatched({
-                //   ...pconf,
-                //   // movieKey: plexMovie[0].ra,
-                // });
-                break;
-              case "plantowatch":
-                break;
-              case "notinteresting":
-                break;
-              default:
-                break;
-            }
-            // consoledebug(movie)();
-            // movie.status
-            // movie.user_rating
-            // movie.movie.ids.{imdb,tmdb,tvdb,tvdbslug}
-            // break;
-          }
-          break;
-        case MediaType.shows:
-          for (let show of simklChanges[mediaType]) {
-            if (!show.show.ids) {
-              consoledebug("Show has no ids", show)();
-              continue;
-            }
-            switch (show.status) {
-              case "completed":
-                break;
-              case "watching":
-                break;
-              case "notinteresting":
-                break;
-              case "hold":
-                break;
-              case "plantowatch":
-                break;
-              default:
-                break;
-            }
-            // consoledebug(show)();
-            // show.status
-            // show.user_rating
-            // show.show.ids.{imdb,tmdb,tvdb,tvdbslug}
-            // show.seasons
-            // break;
-          }
-          break;
-        case MediaType.anime:
-          // TODO: handle anime differently, skip for now
-          // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
-          // as a reference
-          // let tvdbSlugsS = [];
-          for (let anime of simklChanges[mediaType]) {
-            if (!anime.show.ids) {
-              consoledebug("Show has no ids", anime)();
-              continue;
-            }
-            // let keys = Object.keys(anime.show.ids);
-            // if (keys.includes("tvdbslug") && !keys.includes("tvdb")) {
-            //   tvdbSlugsS.push(anime.show.ids);
-            // }
-            switch (anime.status) {
-              case "completed":
-                break;
-              case "watching":
-                break;
-              case "notinteresting":
-                break;
-              case "hold":
-                break;
-              case "plantowatch":
-                break;
-              default:
-                break;
-            }
-          }
-          // consolelog(tvdbSlugsS)();
-          break;
-        default:
-          break;
-      }
-    }
-
-    let totalSyncCount = plexMediaList.reduce((accum, item) => {
-      return accum + item.length;
-    }, 0);
-    consolelog("Total sync count", totalSyncCount)();
-    // return;
-
-    // TODOOOO: start sync
-    let currentIdx = 0;
-    let pMessage = {
-      type: ActionType.action,
-      action: ActionType.ui.sync.progress,
-      value: currentIdx,
-    };
-    for (let mediaType of plexMediaList) {
-      for (let _item of mediaType) {
+    {
+      // for each simkl change sync with plex
+      let totalSyncCount = Object.keys(simklChanges)
+        .map((mediaType) => simklChanges[mediaType])
+        .reduce((accum, item) => {
+          return accum + item.length;
+        }, 0);
+      consolelog("Total simkl changes", totalSyncCount)();
+      let currentIdx = 0;
+      let pMessage = {
+        type: ActionType.action,
+        action: ActionType.ui.sync.progress,
+        value: currentIdx,
+      };
+      for (let mediaType of Object.keys(simklChanges)) {
         if (!!signal && signal.aborted) {
           consoledebug("User canceled sync")();
           return;
         }
-        currentIdx++;
-        pMessage.value = totalSyncCount - currentIdx;
-        chrome.runtime.sendMessage(pMessage);
-        await sleep(20);
+        // mediaType ∈ {'anime', 'movies', 'shows'}
+        switch (mediaType) {
+          case MediaType.movies:
+            for (let movie of simklChanges[mediaType]) {
+              if (!movie.movie.ids) {
+                consoledebug("Movie has no ids", movie)();
+                continue;
+              }
+              currentIdx++;
+              pMessage.value = totalSyncCount - currentIdx;
+              chrome.runtime.sendMessage(pMessage);
+
+              let mPlexids = simklIdsToPlexIds(movie.movie, mediaType);
+              let plexMovie = mPlexids
+                .map((id) => guidLut[id])
+                .filter((m) => m);
+              if (plexMovie.length > 0) {
+                consoledebug("Movie was found in plex library", plexMovie)();
+                // await sleep(300);
+              } else {
+                // consoledebug(
+                //   "Movie was not found in plex library",
+                //   movie.movie.ids.slug
+                // )();
+                continue;
+              }
+              // movie.status
+              // movie.user_rating
+              // consoledebug(movie)();
+              switch (movie.status) {
+                case "completed":
+                  await __API__.plex.apis.markMovieWatched({
+                    ...pconf,
+                    movieKey: plexMovie[0].ratingKey,
+                    name: plexMovie[0].title,
+                  });
+                  break;
+                case "plantowatch":
+                  break;
+                case "notinteresting":
+                  break;
+                default:
+                  break;
+              }
+            }
+            break;
+          case MediaType.shows:
+            for (let show of simklChanges[mediaType]) {
+              if (!show.show.ids) {
+                consoledebug("Show has no ids", show)();
+                continue;
+              }
+              currentIdx++;
+              pMessage.value = totalSyncCount - currentIdx;
+              chrome.runtime.sendMessage(pMessage);
+
+              let mPlexids = simklIdsToPlexIds(show.show, mediaType);
+              let plexShow = mPlexids.map((id) => guidLut[id]).filter((m) => m);
+              if (plexShow.length > 0) {
+                consoledebug("Show was found in plex library", plexShow)();
+                console.log(plexShow);
+                // await sleep(300);
+              } else {
+                // consoledebug(
+                //   "Show was not found in plex library",
+                //   show.show.ids.slug
+                // )();
+                continue;
+              }
+              // show.status
+              // show.user_rating
+              // show.seasons
+              switch (show.status) {
+                case "completed":
+                  break;
+                case "watching":
+                  break;
+                case "notinteresting":
+                  break;
+                case "hold":
+                  break;
+                case "plantowatch":
+                  break;
+                default:
+                  break;
+              }
+            }
+            break;
+          case MediaType.anime:
+            // TODO: handle anime differently, skip for now
+            // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
+            // as a reference
+            // let tvdbSlugsS = [];
+            for (let anime of simklChanges[mediaType]) {
+              if (!anime.show.ids) {
+                consoledebug("Show has no ids", anime)();
+                continue;
+              }
+              currentIdx++;
+              pMessage.value = totalSyncCount - currentIdx;
+              chrome.runtime.sendMessage(pMessage);
+
+              let mPlexids = simklIdsToPlexIds(anime.show, mediaType);
+              let plexAnime = mPlexids
+                .map((id) => guidLut[id])
+                .filter((m) => m);
+              if (plexAnime.length > 0) {
+                consoledebug("Anime was found in plex library", plexAnime)();
+                // await sleep(300);
+              } else {
+                // consoledebug(
+                //   "Anime was not found in plex library",
+                //   anime.show.ids.slug
+                // )();
+                continue;
+              }
+              // let keys = Object.keys(anime.show.ids);
+              // if (keys.includes("tvdbslug") && !keys.includes("tvdb")) {
+              //   tvdbSlugsS.push(anime.show.ids);
+              // }
+              switch (anime.status) {
+                case "completed":
+                  break;
+                case "watching":
+                  break;
+                case "notinteresting":
+                  break;
+                case "hold":
+                  break;
+                case "plantowatch":
+                  break;
+                default:
+                  break;
+              }
+            }
+            // consolelog(tvdbSlugsS)();
+            break;
+          default:
+            break;
+        }
       }
     }
+
+    if (false) {
+      // for each plex item loop
+      let totalSyncCount = plexMediaList.reduce((accum, item) => {
+        return accum + item.length;
+      }, 0);
+      consolelog("Total Plex items", totalSyncCount)();
+
+      // TODOOOO: start sync
+      let currentIdx = 0;
+      let pMessage = {
+        type: ActionType.action,
+        action: ActionType.ui.sync.progress,
+        value: currentIdx,
+      };
+      for (let mediaType of plexMediaList) {
+        for (let _item of mediaType) {
+          if (!!signal && signal.aborted) {
+            consoledebug("User canceled sync")();
+            return;
+          }
+          currentIdx++;
+          pMessage.value = totalSyncCount - currentIdx;
+          chrome.runtime.sendMessage(pMessage);
+          await sleep(20);
+        }
+      }
+    }
+
     await syncDone(serverTime);
   } else {
     if (!simklOauthToken) {

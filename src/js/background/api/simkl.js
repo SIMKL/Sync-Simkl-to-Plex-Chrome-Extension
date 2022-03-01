@@ -4,6 +4,17 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   importScripts("./env.js");
 
   const checkTokenValiditiy = async (responseChannel, token) => {
+    responseChannel =
+      responseChannel ||
+      ((data) => {
+        let message = {
+          ...data,
+          type: ActionType.action,
+          action: ActionType.oauth.simkl.loginCheck,
+        };
+        chrome.runtime.sendMessage(message);
+      });
+
     if (!!token) {
       let { valid } = await getLastActivity(token);
       responseChannel(makeSuccessResponse({ authToken: token, valid }));
