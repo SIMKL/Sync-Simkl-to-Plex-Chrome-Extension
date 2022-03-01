@@ -261,10 +261,10 @@ This document describes the development workflow that went into this project.
     - All plex server endpoints also allow cors to the requested origin. i.e. `chrome-extension://<chrome_ext_id>` in our case.
       - plex server returns `Access-Control-Allow-Origin: chrome-extension://<chrome_ext_id>`
     - This calls for not requesting permissions for resources which allow cors.
-      - TODO: send a request to the provided plex server endpoint
+      - [ ] TODO: send a request to the provided plex server endpoint
       - If cors is enabled, the don't request permission for that origin.
       - If not, show user an error that the provided plex server has cors disabled. So it is not possible to send requests to it. If this case ever arises then we should use `*://*/*` as an optional host permission and request permissions.
-      - [ ] Thus following the above permission request for plex origins and related needs to be removed.
+      - [x] Thus following the above permission request for plex origins and related was removed.
   - The `chrome.webRequest` API which we use to redirect back to the extension page after oauth **requires** `host_permissions` to be specified in the manifest.
   - Currently using `"*://*/*"` as a host permission to allow `http://<chrome_ext_id>/*` as it is not possible to know the extension id before publishing it.
   - But it can't be changed to something other than `http://<chrome_ext_id>` because plex requires the origin to be same as the one requesting for the oauth. i.e. `<chrome_ext_id>`.

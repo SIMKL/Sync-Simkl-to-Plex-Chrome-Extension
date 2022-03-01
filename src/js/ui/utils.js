@@ -35,19 +35,6 @@ const debounce = (func, timeout = 400) => {
   };
 };
 
-// string prototype to make it convinient
-String.prototype.originUrl = function () {
-  return new URL(this).origin + "/";
-};
-
-const removeItemOnce = (arr, value) => {
-  var index = arr.indexOf(value);
-  if (index > -1) {
-    arr.splice(index, 1);
-  }
-  return arr;
-};
-
 const inPopup = () => {
   // know if the current view is a popup or a full tab
   // https://stackoverflow.com/a/8921196

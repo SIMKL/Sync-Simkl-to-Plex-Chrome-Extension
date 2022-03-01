@@ -63,34 +63,10 @@ const handleHashRoutes = async () => {
   let windowHash = window.location.hash;
   if (windowHash == "") windowHash = "#"; // so that next line will result in ""
   // remove #plex-oauth or #simkl-oauth from url to be safe
-  // remove #plex-perm or #simkl-perm from url to be safe
   if (windowHash.startsWith("#plex-") || windowHash.startsWith("#simkl-"))
     removeWindowHash();
 
   let loginType = windowHash.split("-")[0].split("#")[1];
-  let permPromptFollowup = false;
-  // #plexurl-perm
-  if (windowHash == "#plexurl-perm") {
-    permPromptFollowup = true;
-    let parts = window.location.href.split("?");
-    let plexUrl = decodeURIComponent(parts[parts.length - 1].split("=")[1]);
-    removeWindowHash();
-    removeWindowQueryParams();
-    // Here chrome.permissions.contains always returns true
-    // and is thus useless as we have *://* in host_permissions for the manifest
-    // So we are keeping it tracked ourselves
-    let { allowedOrigins } = await chrome.storage.local.get({
-      allowedOrigins: [],
-    });
-    consoledebug("Allowed origins", allowedOrigins)();
-    if (allowedOrigins.includes(plexUrl.originUrl())) {
-      return;
-    }
-    iosAlert(
-      `Access for: ${plexUrl} was denied by you but it is required for sync to work.`,
-      "Attention"
-    ); // no need to stall the UI here by using await
-  }
   // if hash is #plex-oauth or #simkl-oauth
   if (loginType == "plex") {
     // this won't request new pin and code this time
@@ -106,89 +82,6 @@ const handleHashRoutes = async () => {
     // checkSimklAuthTokenValidity();
     await checkSimklAuthTokenValidity();
   }
-  if (permPromptFollowup) {
-    // not required as not using chrome.tabs.update here
-    // if (await chromeTabsUpdateBugVerCheck()) {
-    //   let t = await chrome.tabs.getCurrent();
-    //   consoledebug("Chrome tabs update bug is applicable: closing tab", t)();
-    //   await chrome.tabs.remove(t.id);
-    // }
-  }
-};
-
-// Orgin permission handling
-
-const renewOrginPerms = async (oldPlexUrl, normalizedUrl) => {
-  if (!oldPlexUrl || oldPlexUrl.originUrl() != normalizedUrl.originUrl()) {
-    // url was modified while sync was running
-    // remove permissions for old url
-    consoledebug(
-      oldPlexUrl && oldPlexUrl.originUrl(),
-      normalizedUrl.originUrl()
-    )();
-    await removePlexURIPermissions(oldPlexUrl);
-    await requestPlexURIPermissions(normalizedUrl);
-  }
-};
-
-const removePlexURIPermissions = async (plexUrl) => {
-  if (!plexUrl) return;
-  consoledebug("Removing origin permissions for", plexUrl)();
-  let { allowedOrigins } = await chrome.storage.local.get({
-    allowedOrigins: [],
-  });
-  await chrome.storage.local.set({
-    allowedOrigins: removeItemOnce(allowedOrigins, plexUrl.originUrl()),
-  });
-};
-
-const requestPlexURIPermissions = async (plexUrl) => {
-  // return true;
-  let { allowedOrigins } = await chrome.storage.local.get({
-    allowedOrigins: [],
-  });
-  if (!allowedOrigins.includes(plexUrl.originUrl())) {
-    let allowed = false;
-    try {
-      allowed = await chrome.permissions.request({
-        origins: [plexUrl.originUrl()],
-      });
-      consoledebug("Allowed?", allowed)();
-    } catch (error) {
-      await iosAlert(`Invalid Url: ${plexUrl}\n${error}`);
-    }
-    if (inPopup()) {
-      // check if in popup and open new tab and resume flow
-      // Due to a bug in chrome: after permission is requested popup closes
-      // https://crbug.com/952645
-      let message = {
-        method: CallType.bg.popupAfterPermissionPrompt,
-        type: CallType.call,
-        // TODO: refactor all hash routes in to a common.js enum
-        hashRoute: "plexurl-perm",
-        plexUrl: encodeURIComponent(plexUrl),
-      };
-      chrome.runtime.sendMessage(message);
-      if (allowed) {
-        allowedOrigins.push(plexUrl.originUrl());
-        chrome.storage.local.set({ allowedOrigins });
-      } else {
-        return false;
-      }
-    } else {
-      if (allowed) {
-        allowedOrigins.push(plexUrl.originUrl());
-        chrome.storage.local.set({ allowedOrigins });
-      } else {
-        await iosAlert(
-          `Access for: ${plexUrl} was denied by you but it is required for sync to work.`,
-          "Attention"
-        );
-        return false;
-      }
-    }
-  }
-  return true;
 };
 
 // Sync UI
@@ -329,22 +222,17 @@ const onLoad = async () => {
       !document.body.classList.contains("error-url")
     ) {
       let normalizedUrl = new URL(urlInput.value).href;
-      let { plexInstanceUrl: oldPlexUrl } = await chrome.storage.local.get({
-        plexInstanceUrl: null,
-      });
       await chrome.storage.local.set({
         plexInstanceUrl: normalizedUrl,
         syncPeriod: durationInput.value,
       });
       if (await isSyncEnabled()) {
-        await renewOrginPerms(oldPlexUrl, normalizedUrl);
         // sync enabled; stop it
         uiSyncDisabled();
         stopLibrarySync();
         uiBroadcastSyncState(false);
       } else {
-        // https://stackoverflow.com/questions/27669590/chrome-extension-function-must-be-called-during-a-user-gesture
-        await renewOrginPerms(oldPlexUrl, normalizedUrl);
+        // https://stackoverflow.com/q/27669590
         uiSyncEnabled();
         // TODO: remove the sync-errors
         startLibrarySync(durationInput.value);
