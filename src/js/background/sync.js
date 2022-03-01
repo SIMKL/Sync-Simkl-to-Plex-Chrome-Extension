@@ -75,9 +75,7 @@ const userConfig = async () => {
   };
 };
 
-const plexLibraryShowsLut = async () => {
-  
-};
+const plexLibraryShowsLut = async () => {};
 
 const plexLibraryGuidLut = async (fullList, pconf) => {
   let guidLut = {};
@@ -161,6 +159,64 @@ const plexInstalledAgents = async (apiConf) => {
   };
 };
 
+// returns list of all episode and movie items
+const getPlexMediaList = async (libraries, pconf) => {
+  let fullLibraryList = await Promise.all(
+    libraries.map(
+      async (l) =>
+        await __API__.plex.apis.getLibrarySectionAll(
+          {
+            ...pconf,
+            libraryKey: l.key,
+          },
+          l.type == "show" ? "episode" : l.type
+        )
+    )
+  );
+  // consoledebug(fullLibraryList)();
+  // start processing the results
+  let plexMediaList = fullLibraryList.map((l) => {
+    if (l.error) {
+      consoleerror(l.error)();
+      return [];
+    }
+    return l.items.filter((item) => !!item.Guid || !!item.guid);
+  });
+  return plexMediaList;
+};
+
+// returns list of all season items, no movies
+const getPlexSeasonsList = async (libraries, pconf) =>
+  getPlexShowList(libraries, pconf, true);
+
+// returns list of all shows, no movies
+const getPlexShowList = async (libraries, pconf, seasons = false) => {
+  let fullLibraryList = await Promise.all(
+    libraries
+      .filter((l) => l.type == "show")
+      .map(
+        async (l) =>
+          await __API__.plex.apis.getLibrarySectionAll(
+            {
+              ...pconf,
+              libraryKey: l.key,
+            },
+            seasons ? "seasons" : l.type
+          )
+      )
+  );
+  // consoledebug(fullLibraryList)();
+  // start processing the results
+  let plexShowList = fullLibraryList.map((l) => {
+    if (l.error) {
+      consoleerror(l.error)();
+      return [];
+    }
+    return l.items.filter((item) => !!item.Guid || !!item.guid);
+  });
+  return plexShowList;
+};
+
 const startBgSync = async (signal) => {
   await fetchAniDBTvDBMappings(signal);
 
@@ -182,34 +238,30 @@ const startBgSync = async (signal) => {
       UIEvents.connectFailed("plex");
       return;
     }
-    consoledebug(libraries)();
-    let fullLibraryList = await Promise.all(
-      libraries.map(
-        async (l) =>
-          await __API__.plex.apis.getLibrarySectionAll(
-            {
-              ...pconf,
-              libraryKey: l.key,
-            },
-            l.type
-          )
-      )
+    consoledebug("plex libraries", libraries)();
+    let plexMediaList = await getPlexMediaList(libraries, pconf);
+    const plexMovieList = plexMediaList.map((l) =>
+      l.filter((item) => item.type == "movie")
     );
-    consoledebug(fullLibraryList)();
-    // start processing the results
-    let plexMediaList = fullLibraryList.map((l) => {
-      if (l.error) {
-        consoleerror(l.error)();
-        return [];
-      }
-      return l.items.filter((item) => !!item.Guid || !!item.guid);
-    });
-    consoledebug(plexMediaList)();
+    consoledebug("movies", plexMovieList)();
+    const plexEpisodesList = plexMediaList.map((l) =>
+      l.filter((item) => item.type == "episode")
+    );
+    consoledebug("episodes", plexEpisodesList)();
+    let plexShowList = await getPlexShowList(libraries, pconf);
+    consoledebug("shows", plexShowList)();
+    let plexSeasonList = await getPlexSeasonsList(libraries, pconf);
+    consoledebug("seasons", plexSeasonList)();
 
-    // guid lut
-    let guidLut = await plexLibraryGuidLut(plexMediaList, pconf);
-    consoledebug(guidLut)();
+    // guid look up tables
+    let movieGuidLut = await plexLibraryGuidLut(plexMediaList, pconf);
+    consoledebug(movieGuidLut)();
+    let showsGuidLut = await plexLibraryGuidLut(plexShowList, pconf);
+    consoledebug(showsGuidLut)();
+
     UIEvents.connectDone("plex");
+
+    // Simkl
 
     UIEvents.connectStarted("simkl");
     let { doFullSync } = await chrome.storage.local.get({
@@ -304,7 +356,7 @@ const startBgSync = async (signal) => {
 
               let mPlexids = simklIdsToPlexIds(movie.movie, mediaType);
               let plexMovie = mPlexids
-                .map((id) => guidLut[id])
+                .map((id) => movieGuidLut[id])
                 .filter((m) => m);
               if (plexMovie.length > 0) {
                 consoledebug("Movie was found in plex library", plexMovie)();
@@ -347,7 +399,9 @@ const startBgSync = async (signal) => {
               chrome.runtime.sendMessage(pMessage);
 
               let mPlexids = simklIdsToPlexIds(show.show, mediaType);
-              let plexShow = mPlexids.map((id) => guidLut[id]).filter((m) => m);
+              let plexShow = mPlexids
+                .map((id) => showsGuidLut[id])
+                .filter((m) => m);
               if (plexShow.length > 0) {
                 consoledebug("Show was found in plex library", plexShow)();
                 console.log(plexShow);
@@ -394,7 +448,7 @@ const startBgSync = async (signal) => {
 
               let mPlexids = simklIdsToPlexIds(anime.show, mediaType);
               let plexAnime = mPlexids
-                .map((id) => guidLut[id])
+                .map((id) => movieGuidLut[id])
                 .filter((m) => m);
               if (plexAnime.length > 0) {
                 consoledebug("Anime was found in plex library", plexAnime)();

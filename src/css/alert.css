@@ -162,10 +162,10 @@
     font-family: open sans, lucida grande, lucida sans unicode, lucida sans, Geneva, Verdana, sans-serif;
     text-align: center;
     font-size: 16px;
-    -webkit-user-select: none;
+    /* -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-    user-select: none;
+    user-select: none; */
 }
 
 #Alert.alert-confirm {}
@@ -181,7 +181,7 @@
 }
 
 #Alert .alert-container {
-    max-width: 240px;
+    max-width: 272px;
     width: 80%;
     box-sizing: border-box;
     background-color: rgba(255, 255, 255, 0.9);

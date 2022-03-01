@@ -106,6 +106,7 @@ const CallType = {
       start: "",
       stop: "",
     },
+    sw: { ping: "" },
     popupAfterPermissionPrompt: "",
   },
 };
@@ -141,6 +142,7 @@ const ActionType = {
       failed: "",
     },
   },
+  sw: { pong: "" },
 };
 
 const MediaType = {

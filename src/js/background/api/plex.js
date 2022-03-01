@@ -357,15 +357,21 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     { plexToken, plexApiBaseURL, libraryKey },
     libraryKind = "movie"
   ) => {
+    const libraryKindMap = {
+      movies: 1,
+      movie: 1,
+      shows: 2,
+      show: 2,
+      seasons: 3,
+      season: 3,
+      episodes: 4,
+      episode: 4,
+    };
     try {
       let resp = await fetch(
         `${plexApiBaseURL}library/sections/${libraryKey}/all?` +
           stringifyPlex({
-            // movies   -> 1
-            // shows    -> 2
-            // seasons  -> 3
-            // episodes -> 4
-            type: libraryKind == "movie" ? 1 : 4,
+            type: libraryKindMap[libraryKind],
             includeGuids: 1,
             // "X-Plex-Container-Start": 0,
             // TODO: if unspecified know what's the limit

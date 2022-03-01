@@ -109,6 +109,21 @@ const iosAlert = async function () {
   });
 };
 
+const unresponsiveServiceWorkerAlert = async () => {
+  await iosAlert(
+    `
+<style>#Alert p{ margin-top:0; }</style>
+<p>Chrome extensions have buggy service workers sometimes</p>
+<p>Re-enable the extension by right clicking on the <p>Extension icon > Manage extension</p></p>
+<!--<p>or visit</p>
+<p style="color: var(--form-button-color);">chrome://extensions/?id=${chrome.runtime.id}</p>
+<p>and disable and enable the extension</p>-->
+<b>or Restart your browser.</b>
+`,
+    "Unresponsive"
+  );
+};
+
 const getChromeVersion = async () => {
   // https://web.dev/migrate-to-ua-ch/
   let ua = "";

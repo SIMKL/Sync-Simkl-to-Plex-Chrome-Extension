@@ -73,7 +73,7 @@ importScripts("./api/simkl.js");
 importScripts("../common.js");
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  consoledebug("[SW] Got message:", message, "from:", sender)();
+  // consoledebug("[SW] Got message:", message, "from:", sender)();
   switch (message.type) {
     case CallType.call:
       switch (message.method) {
@@ -83,7 +83,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           // https://stackoverflow.com/a/57608759
           return true;
         case CallType.oauth.plex.checkTokenValiditiy:
-          consoledebug("[SW] Got message for token validation:", message)();
+          // consoledebug("[SW] Got message for token validation:", message)();
           __API__.plex.oauth.checkTokenValiditiy(null, message.token);
           return true;
         case CallType.oauth.simkl.oauthStart:
@@ -108,6 +108,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return true;
         case CallType.bg.sync.stop:
           !!self.aController && self.aController.abort();
+          return true;
+        case CallType.bg.sw.ping:
+          let r = {
+            action: ActionType.sw.pong,
+            type: ActionType.action,
+          };
+          chrome.runtime.sendMessage(r);
+          sendResponse(r);
           return true;
 
         // API methods

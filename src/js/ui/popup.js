@@ -73,6 +73,7 @@ const handleHashRoutes = async () => {
     startPlexOauth();
   } else {
     // request service worker to validate and save plex oauth token
+    await pingServiceWorker();
     await checkPlexAuthTokenValidity();
   }
   if (loginType == "simkl") {
@@ -81,6 +82,7 @@ const handleHashRoutes = async () => {
     // request service worker to validate and save simkl oauth token
     // checkSimklAuthTokenValidity();
     await checkSimklAuthTokenValidity();
+    await pingServiceWorker();
   }
 };
 
@@ -276,6 +278,8 @@ const onLoad = async () => {
       // next sync timer
       startNextSyncTimer();
     }
+    // service worker healthCheck
+    await pingServiceWorker();
   })();
 
   uiSetPopupViewState();
@@ -418,6 +422,9 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
           document.body.classList.add("sync-waiting-for-next-sync");
           startNextSyncTimer();
           break;
+        case ActionType.sw.pong:
+          window.swPong = message;
+          break;
         default:
           consoledebug("Unknown action", message)();
       }
@@ -468,4 +475,21 @@ const startNextSyncTimer = async () => {
   } else {
     document.body.classList.remove("sync-waiting-for-next-sync");
   }
+};
+
+const pingServiceWorker = async () => {
+  // ping service worker every 2 minutes
+  setInterval(pingServiceWorker, 120 * 1000);
+  let m = {
+    type: CallType.call,
+    method: CallType.bg.sw.ping,
+  };
+  await chrome.runtime.sendMessage(m);
+  setTimeout(() => {
+    if (window.swPong) {
+      window.swPong = null;
+      return;
+    }
+    unresponsiveServiceWorkerAlert();
+  }, 6000);
 };
