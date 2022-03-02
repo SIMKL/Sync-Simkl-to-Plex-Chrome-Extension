@@ -1,13 +1,14 @@
 // Consts
 
 const DefaultSyncPeriod = 12;
+const MaxRetryCount = 6;
 const AlarmKey = "plex-libray-sync";
 // TODO: Simkl uninstall feedback url
 const UNINSTALL_URL =
   "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
-// TODO: move this to false in prod
-// const DEVELOPMENT = true;
-const DEVELOPMENT = false;
+// this will be set to false in prod by the build scripts
+const DEVELOPMENT = true;
+const DEVELOPMENT_FETCH_REQS = true;
 
 // Utils
 
@@ -142,7 +143,7 @@ const ActionType = {
       failed: "",
     },
   },
-  sw: { pong: "" },
+  sw: { pong: "", tabFocus: "" },
 };
 
 const MediaType = {
@@ -177,38 +178,46 @@ const interceptLogs = () => {
   methods.forEach((method) => {
     globalThis[`console${method}`] = (...args) => {
       if (DEVELOPMENT) {
-        let now = new Date().toISOString();
         cIdx++;
-        const ac = new AbortController();
-        // 1sec timeout:
-        const timeoutId = setTimeout(() => ac.abort(), 400);
-        fetch(`http://localhost:3000`, {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-          },
-          signal: ac.signal,
-          body: JSON.stringify({
-            index: cIdx,
-            clientTime: now,
-            logLevel: method,
-            type: typeof window == "object" ? "window" : "sw",
-            args: JSON.stringify(args),
-          }),
-        })
-          .then(() => {
-            clearTimeout(timeoutId);
-          })
-          .catch((e) => {
-            // ignore abort error
-            if (e instanceof DOMException) return;
-            // copyCon.error(e);
-          });
+        return devLoggerSetup(method, copyCon, cIdx, args);
       }
-      // https://github.com/akoidan/lines-logger
-      return Function.prototype.bind.call(copyCon[method], console, ...args);
+      return () => {};
     };
   });
 };
 
 interceptLogs();
+
+// Note: This should always stay at the end of the file
+// As build script removes it in prod assuming that there is no content after it.
+const devLoggerSetup = (method, copyCon, cIdx, args) => {
+  let now = new Date().toISOString();
+  const ac = new AbortController();
+  // 1sec timeout:
+  const timeoutId = setTimeout(() => ac.abort(), 400);
+  if (typeof DEVELOPMENT_FETCH_REQS == "undefined") return;
+  fetch(`http://localhost:3000`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+    },
+    signal: ac.signal,
+    body: JSON.stringify({
+      index: cIdx,
+      clientTime: now,
+      logLevel: method,
+      type: typeof window == "object" ? "window" : "sw",
+      args: JSON.stringify(args),
+    }),
+  })
+    .then(() => {
+      clearTimeout(timeoutId);
+    })
+    .catch((e) => {
+      // ignore abort error
+      if (e instanceof DOMException) return;
+      // copyCon.error(e);
+    });
+  // https://github.com/akoidan/lines-logger
+  return Function.prototype.bind.call(copyCon[method], console, ...args);
+};

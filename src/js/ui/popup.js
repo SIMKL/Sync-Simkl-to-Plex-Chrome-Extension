@@ -1,16 +1,20 @@
 const restartLibrarySync = async (
   durationHours = DefaultSyncPeriod,
-  runImmediately = true
+  runImmediately = true,
+  runAfterMS = null
 ) => {
   if (!durationHours) {
     durationHours = DefaultSyncPeriod;
+  }
+  if (!runAfterMS) {
+    runAfterMS = durationHours * 60 * 60 * 1000;
   }
   if (await isSyncEnabled()) stopLibrarySync();
   consoledebug("Starting library sync, duration", durationHours, "hrs")();
   chrome.alarms.create(AlarmKey, {
     when: runImmediately
-      ? Date.now() + 100
-      : Date.now() + durationHours * 60 * 60 * 1000, // start immediately
+      ? Date.now() + 100 // start immediately
+      : Date.now() + runAfterMS,
     periodInMinutes: durationHours * 60,
     // periodInMinutes: 0.1,
   });
@@ -351,19 +355,13 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
           document.body.classList.remove("error-plex-url-offline");
           break;
         case ActionType.ui.sync.plex.offline:
-          document.body.classList.add("error-plex-url-offline");
-          // uiSyncDisabled();
-          // stopLibrarySync();
+          retrySyncWithBackoff("error-plex-url-offline");
           break;
         case ActionType.ui.sync.simkl.online:
           document.body.classList.remove("error-simkl-url-offline");
           break;
         case ActionType.ui.sync.simkl.offline:
-          // TODO: max retries for offline?
-          // better disable sync if offline immediately
-          document.body.classList.add("error-simkl-url-offline");
-          // uiSyncDisabled();
-          // stopLibrarySync();
+          retrySyncWithBackoff("error-simkl-url-offline");
           break;
         case ActionType.ui.sync.plex.connecting:
           document.body.classList.add("sync-connecting-to-plex");
@@ -372,13 +370,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
           document.body.classList.remove("sync-connecting-to-plex");
           break;
         case ActionType.ui.sync.plex.unexpected:
-          document.body.classList.add("error-plex-url-unexpected");
-          setTimeout(() => {
-            // TODO: can this be avoided?
-            // auto dismiss in 10 secs
-            // the other way to dismiss is to modify the url
-            document.body.classList.remove("error-plex-url-unexpected");
-          }, 10000);
+          retrySyncWithBackoff("error-plex-url-unexpected");
           break;
         case ActionType.ui.sync.plex.sessionexpired:
           document.body.classList.add("sync-error-plex");
@@ -392,13 +384,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
           document.body.classList.remove("sync-connecting-to-simkl");
           break;
         case ActionType.ui.sync.simkl.unexpected:
-          document.body.classList.add("error-simkl-url-unexpected");
-          setTimeout(() => {
-            // TODO: can this be avoided?
-            // auto dismiss in 10 secs
-            // the other way to dismiss is to modify the url
-            document.body.classList.remove("error-simkl-url-unexpected");
-          }, 10000);
+          retrySyncWithBackoff("error-simkl-url-unexpected");
           break;
         case ActionType.ui.sync.simkl.sessionexpired:
           document.body.classList.add("sync-error-simkl");
@@ -425,6 +411,13 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
         case ActionType.sw.pong:
           window.swPong = message;
           break;
+        case ActionType.sw.tabFocus:
+          chrome.tabs.discard(
+            (await chrome.tabs.getCurrent()).id,
+            // { active: true },
+            (_) => {}
+          );
+          break;
         default:
           consoledebug("Unknown action", message)();
       }
@@ -439,6 +432,42 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
   // required if we don't use sendResponse
   return true;
 });
+
+// TODO move this logic to service worker
+// or else retry logic will only work when a tab is open
+const retrySyncWithBackoff = async (
+  className = "error-simkl-url-unexpected",
+  maxRetries = MaxRetryCount
+) => {
+  document.body.classList.add(className);
+  let failedTries = (await chrome.storage.local.get({ failedTries: 0 }))[
+    "failedTries"
+  ];
+  await chrome.storage.local.set({
+    failedTries: failedTries + 1,
+  });
+  if (failedTries > maxRetries) {
+    uiSyncDisabled();
+    stopLibrarySync();
+    chrome.storage.local.set({
+      failedTries: 0,
+    });
+    return true;
+  }
+  let backOff = Math.min(Math.pow(2, failedTries), 30);
+  restartLibrarySync(
+    (await chrome.storage.local.get({ syncPeriod: DefaultSyncPeriod }))[
+      "syncPeriod"
+    ],
+    false,
+    backOff * 1000 || 10000
+  );
+  setTimeout(() => {
+    // auto dismiss in 10 secs
+    // the other way to dismiss is to modify the url
+    document.body.classList.remove(className);
+  }, backOff * 1000 || 10000);
+};
 
 const startNextSyncTimer = async () => {
   let signal = null;
@@ -494,7 +523,21 @@ const pingServiceWorker = async () => {
       window.swPong = null;
       return;
     }
-    consoledebug("service worker did not respond after 6sec", pongFound())();
+    consoledebug("service worker did not respond after 6sec", window.swPong)();
     unresponsiveServiceWorkerAlert();
   }, 6000);
 };
+
+chrome.runtime.onSuspend.addListener((e) => {
+  consoledebug(e.type)();
+});
+
+[("unload", "beforeunload")].forEach((type) => {
+  addEventListener(
+    type,
+    (e) => {
+      consoledebug(e.type)();
+    },
+    true
+  );
+});

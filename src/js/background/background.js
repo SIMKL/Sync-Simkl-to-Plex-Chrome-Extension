@@ -196,6 +196,72 @@ chrome.webRequest.onBeforeRequest.addListener(
   chrome.runtime.setUninstallURL(UNINSTALL_URL);
 }
 
-// TODO: might use browser_action (chrome.action) so not using
+// might use browser_action (chrome.action) so not using
 // default_popup for now
 chrome.action.setPopup({ popup: "/popup.html" });
+// chrome.action.onClicked.addListener((_) => {
+//   consoledebug("On Clicked")();
+//   chrome.tabs.create({ url: chrome.runtime.getURL("popup.html") });
+//   chrome.action.setPopup({ popup: "/popup.html" });
+// });
+
+const rootid = "simkl>plex-root";
+const fulltabid = "simkl>plex-full";
+const focustabid = "simkl>plex-focus";
+
+chrome.contextMenus.removeAll(() => {
+  chrome.contextMenus.create({
+    title: "Open",
+    contexts: ["action"],
+    id: rootid,
+  });
+  chrome.contextMenus.create({
+    title: "Open in New Tab",
+    contexts: ["action"],
+    id: fulltabid,
+    parentId: rootid,
+  });
+  chrome.contextMenus.create({
+    title: "Focus on Opened Tab",
+    contexts: ["action"],
+    id: focustabid,
+    parentId: rootid,
+  });
+});
+
+chrome.contextMenus.onClicked.addListener(({ menuItemId }) => {
+  consoledebug(menuItemId, fulltabid, focustabid)();
+  switch (menuItemId) {
+    case fulltabid:
+      chrome.tabs.create({
+        url: chrome.runtime.getURL("popup.html"),
+      });
+      break;
+    case focustabid:
+      let message = {
+        action: ActionType.sw.tabFocus,
+        type: ActionType.action,
+      };
+      chrome.runtime.sendMessage(message);
+      break;
+
+    default:
+      break;
+  }
+});
+
+// const setBadgeText = (text, color) => {
+//   chrome.action.setBadgeText({ text });
+//   if (color == "" || !color) return;
+//   chrome.action.setBadgeBackgroundColor({ color });
+// };
+
+// const SuccessText = "\u2713"; //       ✓
+// const SyncingText = "\ud83d\udd04"; // 🔄
+// const PlexText = "plex";
+// const SimklText = "simkl";
+
+// setBadgeText(SimklText, "#000000");
+// setBadgeText(PlexText, "#b7800a");
+// setBadgeText(SuccessText);
+// chrome.action.setTitle({ title: "Simkl>Plex - Sync done" });

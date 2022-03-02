@@ -314,6 +314,12 @@ This document describes the development workflow that went into this project.
           fetch = +refs/heads/*:refs/remotes/upstream/*
         ```
 
+#### `2/3/2/2022`
+
+- `@phanirithvij`
+  - There is a `"homepage_url": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension"` field in the manifest which shows up as the extension icon right click first item.
+  - Added context menu options for opening in a new tab and focusing on an active tab
+
 #### Notes (`@phanirithvij`)
 
 - Oauth endpoints need to be handled in background.js because popup might close and we might lose the state.

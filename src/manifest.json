@@ -2,6 +2,7 @@
     "manifest_version": 3,
     "name": "Simkl>Plex",
     "description": "Sync Simkl watch history to your plex account",
+    "homepage_url": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension",
     "version": "0.0.1",
     "background": {
         "service_worker": "/js/background/background.js"
@@ -17,6 +18,7 @@
         "https://*.plex.tv/*"
     ],
     "permissions": [
+        "contextMenus",
         "webRequest",
         "alarms",
         "storage"
