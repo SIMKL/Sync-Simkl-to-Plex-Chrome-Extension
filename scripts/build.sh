@@ -23,7 +23,7 @@ set +ex
 if [ ! -f dist/js/background/env.js ]; then
 cat << EOM > dist/js/background/env.js
 const SimklClientID = "$SIMKL_CLIENT_ID";
-const SimklClientSecret = "$SIMKL_CLIENT_SECRET}}";
+const SimklClientSecret = "$SIMKL_CLIENT_SECRET";
 EOM
 fi
 
