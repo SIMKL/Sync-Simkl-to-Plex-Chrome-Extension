@@ -75,7 +75,80 @@ const userConfig = async () => {
   };
 };
 
-const plexLibraryShowsLut = async () => {};
+const plexLibraryShowsLut = async (fullList, pconf) => {
+  let guidLut = {};
+  let unknownGuidList = [];
+  let pAgents = await plexInstalledAgents(pconf);
+  let pErr = null;
+  if (pAgents.movies.error || pAgents.shows.error) {
+    pErr = pAgents.movies.error;
+  }
+  pAgents.shows = pAgents.shows.agents || [];
+  pAgents.movies = pAgents.movies.agents || [];
+  consoledebug("Agents list", pAgents)();
+
+  fullList.forEach((type) =>
+    type.forEach((item) => {
+      if (!!item.Guid) {
+        let guids = item.Guid.map((guid) => guid.id);
+        guids.forEach((guid) => {
+          guidLut[guid] = item;
+        });
+      } else if (!!item.guid) {
+        let parts = item.guid.split("://");
+        if (item.guid.startsWith("local://")) {
+          // TODO: do matching via title search or something else
+        } else if ([...pAgents.shows, ...pAgents.movies].includes(parts[0])) {
+          // remove ?query and get the first part of path
+          // and it won't raise any exceptions as
+          // `str.spilt('delim')[0]` will be `str` if `delim` not in `str`
+          let idx = parts[1].split("?")[0].split("/")[0];
+          // if using absolute-series-scanner or hama or tvdb
+          // guid = "com.plexapp.agents.hama://tvdb-79895/6/332?lang=en"
+          // guid = "com.plexapp.agents.themoviedb://73223/1/1?lang=en"
+          // i.e. well known agents
+          switch (parts[0]) {
+            case "com.plexapp.agents.none":
+              // personal media => ignore
+              break;
+            case "com.plexapp.agents.hama":
+              // eg: parts[1] = tvdb-75897/6/2?lang=en
+              // => idx = tvdb-75897
+              let [sourceT, id_] = idx.split("-");
+              guidLut[`${sourceT}://${id_}`] = item;
+              break;
+            case "com.plexapp.agents.imdb": // plex legacy
+              guidLut[`imdb://${idx}`];
+              break;
+            case "com.plexapp.agents.themoviedb":
+              guidLut[`tmdb://${idx}`];
+              break;
+            case "com.plexapp.agents.thetvdb":
+              guidLut[`tvdb://${idx}`];
+              break;
+            case "tv.plex.agents.series":
+            case "tv.plex.agents.movie":
+              // these two would've been handled in
+              // if (item.Guid) block instead of this
+              // elseif (item.guid)  block
+              consoledebug("unreachable", item.guid)();
+              break;
+            default:
+              consoledebug("Unknown agent", parts[0])();
+              break;
+          }
+        } else if (pAgents.movies.length == 0 || pAgents.shows.length == 0) {
+          // TODO: maybe plex instance is offline
+          consoleerror(pErr)();
+        } else unknownGuidList.push(item.guid);
+      } else {
+        consoledebug("No Guid or guid for item", item)();
+      }
+    })
+  );
+  consoledebug(unknownGuidList)();
+  return guidLut;
+};
 
 const plexLibraryGuidLut = async (fullList, pconf) => {
   let guidLut = {};

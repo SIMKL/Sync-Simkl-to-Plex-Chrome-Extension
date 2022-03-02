@@ -1,0 +1,37 @@
+{
+  "name": "simkl2plex",
+  "version": "0.0.1",
+  "description": "Sync simkl watch history to plex",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: Tests not yet implemented\" && exit 1",
+    "build": "run-script-os",
+    "build:darwin:linux": "sh scripts/build.sh && npm run build:pack",
+    "build:win32": ".\\scripts\\build.bat && npm run build:pack",
+    "build:pack": "web-ext build -s dist -a artifacts/chrome -n '{name}-{version}-chrome.zip' --overwrite-dest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension.git"
+  },
+  "keywords": [
+    "simkl",
+    "plex",
+    "sync",
+    "watch",
+    "history"
+  ],
+  "author": "Simkl",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension/issues"
+  },
+  "homepage": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension#readme",
+  "devDependencies": {
+    "run-script-os": "^1.1.6",
+    "web-ext": "^6.7.0"
+  }
+}

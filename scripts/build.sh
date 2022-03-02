@@ -15,6 +15,10 @@ sed -i -r "s/const devLoggerSetup=\(.*\};/const devloggerSetup=_=>_=>\{\}\;/g" d
 # validate generated js files for syntax
 set +ex
 for i in $(find dist -type f -name "*.js"); do
+    # removing consoledebug calls
+    sed -i -r "s/consoledebug\([^;]*\)\(\);/;/g" "$i"
+    sed -i -r "s/console.debug\([^;]*\);/;/g" "$i"
+    minify -o $i $i
     echo + "node -c $i"
     env NO_COLOR=1 node -c $i
     if [ $? -ne 0 ]; then

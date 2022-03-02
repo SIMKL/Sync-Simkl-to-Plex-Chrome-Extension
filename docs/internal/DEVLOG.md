@@ -319,6 +319,12 @@ This document describes the development workflow that went into this project.
 - `@phanirithvij`
   - There is a `"homepage_url": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension"` field in the manifest which shows up as the extension icon right click first item.
   - Added context menu options for opening in a new tab and focusing on an active tab
+  - package.json use `run-script-os` https://stackoverflow.com/a/53197655.
+  - TODO: move away from go, and use node.js scripts for everything instead. I used go initially intending the scripts written to be temporary but they are kind of required now.
+    - Using `minify` go binary to minify things in the build script, use gulp instead.
+      - A reference for building cross-platform browser extensions[here](https://github.com/dessant/search-by-image/blob/master/gulpfile.js)
+    - It is important to have build scripts and to not write everything in github actions, because migrating to another hosting will require writing build scripts then.
+      - Only have setup steps in github actions, use build scripts (makefile/bash/bat or something else) for everything else.
 
 #### Notes (`@phanirithvij`)
 

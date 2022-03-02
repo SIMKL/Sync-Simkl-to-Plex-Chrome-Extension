@@ -535,8 +535,11 @@ chrome.runtime.onSuspend.addListener((e) => {
 [("unload", "beforeunload")].forEach((type) => {
   addEventListener(
     type,
-    (e) => {
-      consoledebug(e.type)();
+    async () => {
+      // force tab to not unload
+      let tabid = (await chrome.tabs.getCurrent()).id;
+      consoledebug("Tab", tabid, "tried to die")();
+      chrome.tabs.reload(tabid);
     },
     true
   );

@@ -15,6 +15,9 @@ setlocal enableDelayedExpansion
 @echo off
 set NO_COLOR=1
 for /R %%f in (*.js) do (
+    sed -i -r "s/consoledebug\([^;]*\)\(\);/;/g" "%%f"
+    sed -i -r "s/console.debug\([^;]*\);/;/g" "%%f"
+    minify -o %%f %%f
     echo node -c %%f
     node -c %%f
     rem https://stackoverflow.com/a/11692001
