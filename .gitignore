@@ -6,3 +6,4 @@ src/js/background/env.js
 inspirobot.me/
 dist/
 artifacts/
+*.zip

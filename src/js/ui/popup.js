@@ -531,16 +531,3 @@ const pingServiceWorker = async () => {
 chrome.runtime.onSuspend.addListener((e) => {
   consoledebug(e.type)();
 });
-
-[("unload", "beforeunload")].forEach((type) => {
-  addEventListener(
-    type,
-    async () => {
-      // force tab to not unload
-      let tabid = (await chrome.tabs.getCurrent()).id;
-      consoledebug("Tab", tabid, "tried to die")();
-      chrome.tabs.reload(tabid);
-    },
-    true
-  );
-});

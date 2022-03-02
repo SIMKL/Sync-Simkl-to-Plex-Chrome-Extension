@@ -195,29 +195,30 @@ const devLoggerSetup = (method, copyCon, cIdx, args) => {
   const ac = new AbortController();
   // 1sec timeout:
   const timeoutId = setTimeout(() => ac.abort(), 400);
-  if (typeof DEVELOPMENT_FETCH_REQS == "undefined") return;
-  fetch(`http://localhost:3000`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-    },
-    signal: ac.signal,
-    body: JSON.stringify({
-      index: cIdx,
-      clientTime: now,
-      logLevel: method,
-      type: typeof window == "object" ? "window" : "sw",
-      args: JSON.stringify(args),
-    }),
-  })
-    .then(() => {
-      clearTimeout(timeoutId);
+  if (typeof DEVELOPMENT_FETCH_REQS !== "undefined") {
+    fetch(`http://localhost:3000`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+      signal: ac.signal,
+      body: JSON.stringify({
+        index: cIdx,
+        clientTime: now,
+        logLevel: method,
+        type: typeof window == "object" ? "window" : "sw",
+        args: JSON.stringify(args),
+      }),
     })
-    .catch((e) => {
-      // ignore abort error
-      if (e instanceof DOMException) return;
-      // copyCon.error(e);
-    });
+      .then(() => {
+        clearTimeout(timeoutId);
+      })
+      .catch((e) => {
+        // ignore abort error
+        if (e instanceof DOMException) return;
+        // copyCon.error(e);
+      });
+  }
   // https://github.com/akoidan/lines-logger
   return Function.prototype.bind.call(copyCon[method], console, ...args);
 };
