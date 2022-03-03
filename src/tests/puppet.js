@@ -3,20 +3,17 @@ const { runQunitPuppeteer, printOutput } = require("node-qunit-puppeteer");
 
 const launchNodeQunit = async (qunitArgs) => {
   try {
-    // must be headless: false
+    // must be headless: false (headful)
     // https://github.com/puppeteer/puppeteer/blob/main/docs/api.md#working-with-chrome-extensions
     let result = await runQunitPuppeteer(qunitArgs, false);
     printOutput(result, console);
     if (result.stats.failed > 0) {
-      // Handle the failed test run
-      // console.error(result);
     }
   } catch (err) {
     console.error(err);
   }
 };
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 (async () => {
   const pathToExtension = require("path").join(__dirname, "../");
   console.log("[INFO] Loading extension " + pathToExtension);
@@ -47,20 +44,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     puppeteerConfig.executablePath = process.env.PUPPETEER_EXEC_PATH;
 
   const browser = await puppeteer.launch(puppeteerConfig);
-  let pages = await browser.pages();
-  let prevTabs = pages.length;
-  let tries = 0;
-  while (tries < 300) {
-    pages = await browser.pages();
-    if (prevTabs != pages.length) break;
-    await sleep(100);
-    tries++;
-    prevTabs = pages.length;
-  }
-  // #fresh-install page
-  const extPage = pages.find((x) => x.url().startsWith("chrome-extension://"));
-  const extId = new URL(extPage.url()).hostname;
-  await extPage.close();
+  const extId = "edjlcleicmcdpapdcobooenkchaehdib";
   qunitArgs.targetUrl = `chrome-extension://${extId}/tests/index.html`;
   launchNodeQunit(qunitArgs);
   const page = await browser.newPage();
