@@ -5,8 +5,7 @@ on: push
 jobs:
   build:
     name: Build
-    runs-on: windows-latest
-    # runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
