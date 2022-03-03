@@ -7,3 +7,4 @@ inspirobot.me/
 dist/
 artifacts/
 *.zip
+qunit-results.png

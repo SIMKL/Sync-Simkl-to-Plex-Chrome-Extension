@@ -1,0 +1,8 @@
+302c302
+< async function runQunitPuppeteer(qunitPuppeteerArgs) {
+---
+> async function runQunitPuppeteer(qunitPuppeteerArgs, headless = true) {
+304c304
+<   const args = { args: puppeteerArgs };
+---
+>   const args = { args: puppeteerArgs, headless };
