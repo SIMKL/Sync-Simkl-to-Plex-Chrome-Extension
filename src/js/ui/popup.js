@@ -527,7 +527,3 @@ const pingServiceWorker = async () => {
     unresponsiveServiceWorkerAlert();
   }, 6000);
 };
-
-chrome.runtime.onSuspend.addListener((e) => {
-  consoledebug(e.type)();
-});

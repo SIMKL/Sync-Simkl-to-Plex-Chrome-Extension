@@ -329,12 +329,13 @@ This document describes the development workflow that went into this project.
     - Just tag a new release and ci will build the extension and upload it to the tagged release's assets.
     - The build script is `scripts/build.sh` which runs on github actions in a `ubuntu-20.0` container.
       - There is `scripts/build.bat` as well but it is only for local development on windows (I use windows). Not meant to be used in production or in the github actions (yet).
-    - [ ] check if uploading to chrome web store can be automated and add it to the release workflow
+    - [ ] check if uploading to chrome web store can be automated and add it to the release workflow.
+      - Yet to be done.
 
 #### `3/3/2/2022`
 
 - `@phanirithvij`
-  - [ ] Finished with the sync.
+  - [ ] Finish with the sync
     - [x] Movies
     - [ ] Shows
       - [ ] Anime
@@ -344,13 +345,30 @@ This document describes the development workflow that went into this project.
     - Squashing commits https://stackoverflow.com/a/5190323
   - Looked at how we can add unit and integration tests to the extension.
     - One option is [`Qunit`](https://qunitjs.com/intro/) which can run tests directly in the browser, combining with puppeteer after installing our chrome extension.
+      - [x] Implemented
     - We can capture screenshots and all of this can be run in a `ci.yml` workflow that runs on `push/pr/workflow_dispatch/etc.`.
+      - [x] Implemented
     - Other things to take note of in ci.yml
       - Lint
         - auto fmt
         - [maybe use this](https://github.com/marketplace/actions/lint-action#supported-tools)
+        - `web-ext lint` is not useful for us.
+          - It assumes firefox and firefox has yet to have manifest v3 support.
+            - `innerHTML` should be avoided is the only relevant suggestion web-ext lint gave.
+            - There is also `chrome.sync` warnings which require some attention if we want to support firefox.
+            - and `chrome.runtime.onSuspend` is not available on firefox and is not working at all on chrome either, so can't detect when the service worker is about to be killed by chrome using this. Removed any refrences.
+          - This also concluded that to support firefox, safari etc. A lot more work needs to be done to properly seperate files, methods and use `browser.*` calls when appropriate. And all other browsers except chrome needs a manifest **v2** logic.
+          - [search-by-image](https://github.com/dessant/search-by-image) is an excellent reference for supporting cross-browser webextensions.
       - Misspell
-  - TODO: Refactor `sync.js` methods properly
+  - [x] Move away from windows batch file and use powershell
+    - Implemented this, it had an issue with multiline regex using `(?ms)` or something which did not work at all. (refer the script for more comments on this)
+    - Tried running the build on github actions on a `windows-latest` runner but it choked and got stuck for 3 hours, not sure what the issue is. But ignore it for now as the build.ps1 script works fine locally and thus serves its purpose.
+  - TODO:
+    - [ ] Finish sync the next thing tomorrow
+      - [ ] Refactor `sync.js` methods properly
+    - [ ] Prepare a document for general users to beta test the extension.
+    - [ ] Add unit tests
+      - Maybe unit tests can be included in the beta test for others?
 
 #### Notes (`@phanirithvij`)
 
@@ -363,3 +381,7 @@ This document describes the development workflow that went into this project.
   - [Netflix enhancer](https://chrome.google.com/webstore/detail/enhancer-for-netflix-crun/dbpjfmehfpcgmlpfnfilcnhbckmecmca)
   - [Plex-Web-API-Overview](https://github.com/Arcanemagus/plex-api/wiki/Plex-Web-API-Overview)
   - [DeWolfRobin/ReverseSyncPlex](https://github.com/DeWolfRobin/ReverseSyncPlex)
+- More to come.
+- Important: manifest `key` field should be removed when uploading to chrome webstore and also the key.pem file should be also zipped and uploaded the very first time.
+  - So no need to automate the key.pem zipping in release workflow.
+  - Publish to store

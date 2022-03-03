@@ -78,22 +78,46 @@ const chromeTabsUpdateBugVerCheck = async () =>
 // if iosAlert() is used without await, ui will work on normally
 const iosAlert = async function () {
   try {
-    var $alert = document.querySelector("#Alert");
+    let $alert = document.querySelector("#Alert");
     $alert.parentElement.removeChild($alert);
   } catch (error) {}
 
-  var $alert = document.createElement("span");
-  $alert.innerHTML = `
-    <div id="Alert">
-      <div class="alert-container">
-        <div class="alert-title">${arguments[1] ? arguments[1] : ""}</div>
-        <div class="alert-message">${arguments[0]}</div>
-        <div class="alert-actions">
-          <button class="alert-action-item">OK</button>
-        </div>
-      </div>
-    </div>
-    `;
+  let $alert = document.createElement("span");
+  // TODO: avoid innerHTML, refactor this
+  let rootDiv = document.createElement("div");
+  rootDiv.id = "Alert";
+  let cdiv = document.createElement("div");
+  cdiv.classList.add("alert-container");
+  rootDiv.appendChild(cdiv);
+  let atitle = document.createElement("div");
+  atitle.classList.add("alert-title");
+  atitle.innerText = arguments[1] || "";
+  let amessage = document.createElement("div");
+  amessage.classList.add("alert-message");
+  amessage.innerText = arguments[0];
+  let aactions = document.createElement("div");
+  aactions.classList.add("alert-actions");
+  let bok = document.createElement("button");
+  bok.classList.add("alert-action-item");
+  bok.innerText = "OK";
+  aactions.appendChild(bok);
+  cdiv.appendChild(atitle);
+  cdiv.appendChild(amessage);
+  cdiv.appendChild(aactions);
+  $alert.appendChild(rootDiv);
+
+  // $alert.innerHTML = `
+  //   <div id="Alert">
+  //     <div class="alert-container">
+  //       <div class="alert-title">${arguments[1] || ""}</div>
+  //       <div class="alert-message">${arguments[0]}</div>
+  //       <div class="alert-actions">
+  //         <button class="alert-action-item">OK</button>
+  //       </div>
+  //     </div>
+  //   </div>
+  //   `;
+
   document.querySelector("body").appendChild($alert);
   return new Promise(function (resolve) {
     // https://stackoverflow.com/a/35718902
