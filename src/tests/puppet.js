@@ -32,7 +32,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       "--allow-file-access-from-files",
     ],
   };
-  const browser = await puppeteer.launch({
+  const puppeteerConfig = {
     headless: false,
     args: [
       `--disable-extensions-except=${pathToExtension}`,
@@ -40,7 +40,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       "--no-sandbox",
       "--disable-setuid-sandbox",
     ],
-  });
+  };
+
+  // https://stackoverflow.com/a/62229404
+  if (process.env.PUPPETEER_EXEC_PATH)
+    puppeteerConfig.executablePath = process.env.PUPPETEER_EXEC_PATH;
+
+  const browser = await puppeteer.launch(puppeteerConfig);
   let pages = await browser.pages();
   let prevTabs = pages.length;
   let tries = 0;
