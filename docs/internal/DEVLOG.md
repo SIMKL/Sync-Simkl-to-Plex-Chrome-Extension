@@ -66,7 +66,7 @@ This document describes the development workflow that went into this project.
       - Redirect flow works now. But there is a catch because of how plex oauth flow works.
         - Plex doesn't return `?code=<>` so we need to request a specific endpoint to get the `authToken` after entering the extension again.
         - For this the logic coded was save `pincode,pinid` to localstorage after the intial request and before the redirect if the url hash is `plex-oauth` then load `pincode,pinid` from localstorage and get the `authToken` and remove them from localstorage and remove the url hash, i.e., `popup.html`
-        - TODO: Also may need to add expire time to localstorage to invalidate expired `pincode,pinid` from localstorage.
+        - TODO(#2): Also may need to add expire time to localstorage to invalidate expired `pincode,pinid` from localstorage.
     - Got the html UI from Andrew and connected the plex oaut flow to the `connect plex` button, via the css classlist toggle logic as suggested by Andrew.
     - Sent PR [#1](https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension/pull/1)
 
@@ -75,7 +75,7 @@ This document describes the development workflow that went into this project.
   - Finished working with the html/css
   - Chrome extension disallows the popup dimensions to exceed `800px x 600px` and the final height was `662px`
   - Made the changes required to get it to `599px`
-    - FIXME: But it still shows a scroll bar - @phanirithvij
+    - FIXME(#3): But it still shows a scroll bar - @phanirithvij
       - @masyk said it's fine if it scrolls because the bottom text which is obscured is not worth re-adjusting the ui for.
 
 ---
@@ -160,7 +160,7 @@ This document describes the development workflow that went into this project.
     - [x] Error handling for UI
     - [ ] Content matching by episode, season, show, movie
       - Simkl returns ...
-  - TODO: Show a warning message before user starts syncing for the very first time that their plex library must be perfectly organized and each movie/show/season/episode needs to be recognized by plex as something. If the episodes and seasons recognized are erroneous then syncing will be erroneous.
+  - TODO(#4): Show a warning message before user starts syncing for the very first time that their plex library must be perfectly organized and each movie/show/season/episode needs to be recognized by plex as something. If the episodes and seasons recognized are erroneous then syncing will be erroneous.
     - eg. if `S01` for some reason is recognised as `S02` in plex, then it will have `S02` episodes status marked.
   - mention the official plex guide?
 
@@ -261,7 +261,7 @@ This document describes the development workflow that went into this project.
     - All plex server endpoints also allow cors to the requested origin. i.e. `chrome-extension://<chrome_ext_id>` in our case.
       - plex server returns `Access-Control-Allow-Origin: chrome-extension://<chrome_ext_id>`
     - This calls for not requesting permissions for resources which allow cors.
-      - [ ] TODO: send a request to the provided plex server endpoint
+      - [ ] TODO(#5): send a request to the provided plex server endpoint
       - If cors is enabled, the don't request permission for that origin.
       - If not, show user an error that the provided plex server has cors disabled. So it is not possible to send requests to it. If this case ever arises then we should use `*://*/*` as an optional host permission and request permissions.
       - [x] Thus following the above permission request for plex origins and related was removed.
@@ -320,11 +320,23 @@ This document describes the development workflow that went into this project.
   - There is a `"homepage_url": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension"` field in the manifest which shows up as the extension icon right click first item.
   - Added context menu options for opening in a new tab and focusing on an active tab
   - package.json use `run-script-os` https://stackoverflow.com/a/53197655.
-  - TODO: move away from go, and use node.js scripts for everything instead. I used go initially intending the scripts written to be temporary but they are kind of required now.
+  - TODO(#6): move away from go, and use node.js scripts for everything instead. I used go initially intending the scripts written to be temporary but they are kind of required now.
     - Using `minify` go binary to minify things in the build script, use gulp instead.
       - A reference for building cross-platform browser extensions[here](https://github.com/dessant/search-by-image/blob/master/gulpfile.js)
     - It is important to have build scripts and to not write everything in github actions, because migrating to another hosting will require writing build scripts then.
       - Only have setup steps in github actions, use build scripts (makefile/bash/bat or something else) for everything else.
+  - Setup github actions and create extension release.
+    - Just tag a new release and ci will build the extension and upload it to the tagged release's assets
+    - [ ] check if uploading to chrome web store can be automated and add it to the release workflow
+
+#### `3/3/2/2022`
+
+- `@phanirithvij`
+  - [ ] Finished with the sync.
+    - [x] Movies
+    - [ ] Shows
+      - [ ] Anime
+        - Anime requires special care
 
 #### Notes (`@phanirithvij`)
 

@@ -162,7 +162,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     }
   };
 
-  // TODO: to remove the plex warning
+  // TODO(#8): to remove the plex warning
   // we need to proxy this particular request
   // on simkl.com php backend
   const plexRequestPIN = async () => {
@@ -232,7 +232,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       }
       consoledebug("Plex authToken response:", response)();
       if ("errors" in response) {
-        // TODO: this might be because pincode and pinid expired
+        // TODO(#9): this might be because pincode and pinid expired
         // they stayed in the local storage for too long
         // failed to authenticate the user
         // show error message
@@ -342,7 +342,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           }
           return { error: "unexpected", libraries: null };
         } catch (error) {
-          // TODO: invalid json response
+          // TODO(#10): invalid json response
           return { error: error, libraries: null };
         }
       }
@@ -374,7 +374,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
             type: libraryKindMap[libraryKind],
             includeGuids: 1,
             // "X-Plex-Container-Start": 0,
-            // TODO: if unspecified know what's the limit
+            // TODO(#11): if unspecified know what's the limit
             // and know what's the max limit for container size
             // in general (when specified)
             // worked for 1274 items
@@ -401,7 +401,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           consoledebug(data)();
           return { error: "unexpected", items: null };
         } catch (error) {
-          // TODO: invalid json response
+          // TODO(#12): invalid json response
           return { error: error, items: null };
         }
       }
@@ -426,7 +426,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           },
         }
       ).catch(throwError);
-      // TODO: here plex.tv is offline not local plex instance
+      // TODO(#13): here plex.tv is offline not local plex instance
       // make it clear in the ui?
       broadcastOnlineStatus();
       let xml = await resp.text();
@@ -772,7 +772,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           enableAutoPhotoTags: "",
           downloadMedia: "",
           location: "C:\\Users\\Rithvij\\AppData\\Local\\Temp\\simkl-movies",
-          // TODO: this won't work as arrays aren't supported by `stringify`
+          // TODO(#14): this won't work as arrays aren't supported by `stringify`
           // location: "C:\\Users\\Rithvij\\AppData\\Local\\Temp\\simkl-movies2",
           "prefs[hidden]": 2,
           "prefs[useLocalAssets]": 0,

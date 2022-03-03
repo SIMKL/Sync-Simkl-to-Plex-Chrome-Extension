@@ -97,7 +97,7 @@ const plexLibraryShowsLut = async (fullList, pconf) => {
       } else if (!!item.guid) {
         let parts = item.guid.split("://");
         if (item.guid.startsWith("local://")) {
-          // TODO: do matching via title search or something else
+          // TODO(#20): do matching via title search or something else
         } else if ([...pAgents.shows, ...pAgents.movies].includes(parts[0])) {
           // remove ?query and get the first part of path
           // and it won't raise any exceptions as
@@ -138,7 +138,7 @@ const plexLibraryShowsLut = async (fullList, pconf) => {
               break;
           }
         } else if (pAgents.movies.length == 0 || pAgents.shows.length == 0) {
-          // TODO: maybe plex instance is offline
+          // TODO(#21): maybe plex instance is offline
           consoleerror(pErr)();
         } else unknownGuidList.push(item.guid);
       } else {
@@ -172,7 +172,7 @@ const plexLibraryGuidLut = async (fullList, pconf) => {
       } else if (!!item.guid) {
         let parts = item.guid.split("://");
         if (item.guid.startsWith("local://")) {
-          // TODO: do matching via title search or something else
+          // TODO(#22): do matching via title search or something else
         } else if ([...pAgents.shows, ...pAgents.movies].includes(parts[0])) {
           // remove ?query and get the first part of path
           // and it won't raise any exceptions as
@@ -213,7 +213,7 @@ const plexLibraryGuidLut = async (fullList, pconf) => {
               break;
           }
         } else if (pAgents.movies.length == 0 || pAgents.shows.length == 0) {
-          // TODO: maybe plex instance is offline
+          // TODO(#23): maybe plex instance is offline
           consoleerror(pErr)();
         } else unknownGuidList.push(item.guid);
       } else {
@@ -307,7 +307,7 @@ const startBgSync = async (signal) => {
     );
     if (!libraries) {
       consoleerror(error)();
-      // TODO: check if plex token expired
+      // TODO(#24): check if plex token expired
       UIEvents.connectFailed("plex");
       return;
     }
@@ -389,7 +389,7 @@ const startBgSync = async (signal) => {
         consoledebug("User canceled sync")();
         return;
       }
-      // TODO: sync failed, save error?
+      // TODO(#25): sync failed, save error?
       consoleerror(err)();
       return;
     }
@@ -506,7 +506,7 @@ const startBgSync = async (signal) => {
             }
             break;
           case MediaType.anime:
-            // TODO: handle anime differently, skip for now
+            // TODO(#26): handle anime differently, skip for now
             // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
             // as a reference
             // let tvdbSlugsS = [];
@@ -567,7 +567,7 @@ const startBgSync = async (signal) => {
       }, 0);
       consolelog("Total Plex items", totalSyncCount)();
 
-      // TODOOOO: start sync
+      // TODOOOO(#27): start sync
       let currentIdx = 0;
       let pMessage = {
         type: ActionType.action,

@@ -153,7 +153,7 @@ const handleOauthIntercepts = async ({ tabId, url }) => {
     await chrome.tabs.update(tabId, {
       url: chrome.runtime.getURL("/popup.html#simkl-oauth"),
     });
-    // FIXME: instead of reloading the tab chrome.runtime.sendMessage can be used
+    // FIXME(#19): instead of reloading the tab chrome.runtime.sendMessage can be used
     await chrome.tabs.reload(tabId);
     let parts = url.split("?");
     let simklPinCode = parts[parts.length - 1].split("=")[1];

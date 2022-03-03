@@ -59,7 +59,7 @@ const finishSimklOauth = (message) => {
     saveSimklAuthToken(message.authToken);
     return true;
   }
-  // TODO: simkl oauth finish show any errors
+  // TODO(#37): simkl oauth finish show any errors
   // Something like `setUIErrorMessage(message.error)` ?
   consoledebug(message)();
 };

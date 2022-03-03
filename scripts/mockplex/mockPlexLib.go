@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	// TODO: use os.Link to create
+	// TODO(#7): use os.Link to create
 	// convincing plex test cases
 	original := "sample.webm"
 	var err error

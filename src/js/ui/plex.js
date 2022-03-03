@@ -60,7 +60,7 @@ const finishPlexOauth = (message) => {
     chrome.storage.local.set({ pincode: null, pinid: null });
     return true;
   }
-  // TODO: show errors
+  // TODO(#30): show errors
   // setUIErrorMessage(message.error);
   consoledebug(message)();
 };

@@ -3,7 +3,7 @@
 const DefaultSyncPeriod = 12;
 const MaxRetryCount = 6;
 const AlarmKey = "plex-libray-sync";
-// TODO: Simkl uninstall feedback url
+// TODO(#28): Simkl uninstall feedback url
 const UNINSTALL_URL =
   "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
 // this will be set to false in prod by the build scripts
@@ -152,7 +152,7 @@ const MediaType = {
   shows: "",
 };
 
-// TODO: refactor all chrome.storage.{local,sync} key names here
+// TODO(#29): refactor all chrome.storage.{local,sync} key names here
 const StorageKeys = {
   setBrowserInfo: "",
 };

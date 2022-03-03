@@ -44,7 +44,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       redirect_uri: SimklRedirectURI,
       grant_type: "authorization_code",
     };
-    // TODO: API error handling
+    // TODO(#15): API error handling
     return await (
       await fetch("https://api.simkl.com/oauth/token", {
         method: "POST",
@@ -79,7 +79,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       consoledebug("Simkl access_token response:", response)();
       if ("error" in response) {
         // failed to authenticate the user
-        // TODO: this might be because code expired
+        // TODO(#16): this might be because code expired
         // it stayed in the local storage for too long
         responseChannel(makeErrorResponse(response));
         return;
@@ -195,7 +195,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   const getLastActivity = async (token, responseChannel = null) => {
-    // TODO: API error handling
+    // TODO(#17): API error handling
     let resp = await fetch("https://api.simkl.com/sync/activities", {
       headers: {
         "Content-Type": "application/json",
@@ -214,7 +214,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   const getUserInfo = async (token) => {
-    // TODO: API error handling
+    // TODO(#18): API error handling
     let resp = await fetch("https://api.simkl.com/users/settings", {
       headers: {
         "Content-Type": "application/json",

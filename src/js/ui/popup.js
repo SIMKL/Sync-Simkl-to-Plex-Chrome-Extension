@@ -127,7 +127,7 @@ const uiSetLandscapeUrl = async (url) => {
       return;
     }
   }
-  // TODO: check if not 404 or reachable and set it.
+  // TODO(#31): check if not 404 or reachable and set it.
   setCssVar("--background-image-url", `url('${url}')`);
 };
 
@@ -240,7 +240,7 @@ const onLoad = async () => {
       } else {
         // https://stackoverflow.com/q/27669590
         uiSyncEnabled();
-        // TODO: remove the sync-errors
+        // TODO(#32): remove the sync-errors
         startLibrarySync(durationInput.value);
         uiBroadcastSyncState(true);
         await chrome.storage.local.set({
@@ -311,7 +311,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
             setUIPlexConnected();
             savePlexAuthToken(authToken);
           } else {
-            // TODO: show login prompt
+            // TODO(#33): show login prompt
             // with message describing that the old session expired
             logoutPlex();
             consoledebug(message)();
@@ -333,7 +333,7 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
             setUISimklConnected();
             saveSimklAuthToken(authToken);
           } else {
-            // TODO: simkl auth_token revoked handle ux
+            // TODO(#34): simkl auth_token revoked handle ux
             // Show login prompt again
             // with message describing that the old session expired
             logoutSimkl();
@@ -472,7 +472,7 @@ const retrySyncWithBackoff = async (
 const startNextSyncTimer = async () => {
   let signal = null;
   if (!!window.timerAbortC) {
-    // TODO: to comibne multiple signals
+    // TODO(#35): to comibne multiple signals
     // https://github.com/whatwg/fetch/issues/905#issuecomment-491970649
     window.timerAbortC.abort();
     window.timerAbortC = null;
@@ -489,7 +489,7 @@ const startNextSyncTimer = async () => {
     (await chrome.alarms.get(AlarmKey)).scheduledTime
   );
   let remainingMS = () => scheduledSyncTime.getTime() - now().getTime();
-  // TODO: determine if sync is ongoing and don't show this
+  // TODO(#36): determine if sync is ongoing and don't show this
   if (now() > lastSyncedTime && now() < scheduledSyncTime) {
     document.body.classList.add("sync-waiting-for-next-sync");
     let totSecs = parseInt(syncPeriod) * 60 * 60;
