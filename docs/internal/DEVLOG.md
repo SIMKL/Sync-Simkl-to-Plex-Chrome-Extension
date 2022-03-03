@@ -326,7 +326,9 @@ This document describes the development workflow that went into this project.
     - It is important to have build scripts and to not write everything in github actions, because migrating to another hosting will require writing build scripts then.
       - Only have setup steps in github actions, use build scripts (makefile/bash/bat or something else) for everything else.
   - Setup github actions and create extension release.
-    - Just tag a new release and ci will build the extension and upload it to the tagged release's assets
+    - Just tag a new release and ci will build the extension and upload it to the tagged release's assets.
+    - The build script is `scripts/build.sh` which runs on github actions in a `ubuntu-20.0` container.
+      - There is `scripts/build.bat` as well but it is only for local development on windows (I use windows). Not meant to be used in production or in the github actions (yet).
     - [ ] check if uploading to chrome web store can be automated and add it to the release workflow
 
 #### `3/3/2/2022`
@@ -337,6 +339,18 @@ This document describes the development workflow that went into this project.
     - [ ] Shows
       - [ ] Anime
         - Anime requires special care
+  - Used the handy snitch tool (another go binary) and posted all the stay todos and fixmes into a separate repo to not pollute my fork.
+  - Then squashed all the 37 generated commits into one.
+    - Squashing commits https://stackoverflow.com/a/5190323
+  - Looked at how we can add unit and integration tests to the extension.
+    - One option is [`Qunit`](https://qunitjs.com/intro/) which can run tests directly in the browser, combining with puppeteer after installing our chrome extension.
+    - We can capture screenshots and all of this can be run in a `ci.yml` workflow that runs on `push/pr/workflow_dispatch/etc.`.
+    - Other things to take note of in ci.yml
+      - Lint
+        - auto fmt
+        - [maybe use this](https://github.com/marketplace/actions/lint-action#supported-tools)
+      - Misspell
+  - TODO: Refactor `sync.js` methods properly
 
 #### Notes (`@phanirithvij`)
 

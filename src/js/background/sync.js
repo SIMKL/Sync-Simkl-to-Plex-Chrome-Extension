@@ -433,7 +433,6 @@ const startBgSync = async (signal) => {
                 .filter((m) => m);
               if (plexMovie.length > 0) {
                 consoledebug("Movie was found in plex library", plexMovie)();
-                // await sleep(300);
               } else {
                 // consoledebug(
                 //   "Movie was not found in plex library",
@@ -453,8 +452,12 @@ const startBgSync = async (signal) => {
                   });
                   break;
                 case "plantowatch":
+                  // TODO: next release, add non-existant library entries
                   break;
                 case "notinteresting":
+                  // not possible to do anything here
+                  // we can't delete a single item
+                  // or mark it as notintersting in a plex library
                   break;
                 default:
                   break;
@@ -478,7 +481,6 @@ const startBgSync = async (signal) => {
               if (plexShow.length > 0) {
                 consoledebug("Show was found in plex library", plexShow)();
                 console.log(plexShow);
-                // await sleep(300);
               } else {
                 // consoledebug(
                 //   "Show was not found in plex library",
@@ -491,9 +493,15 @@ const startBgSync = async (signal) => {
               // show.seasons
               switch (show.status) {
                 case "completed":
+                  // TODO: mark whole thing as watched
                   break;
                 case "watching":
+                  // TODO: see what items are watched
+                  // and efficiently mark them as watched
+                  // i.e. if a whole season is done use season watched plex api method
                   break;
+                // The next 3 cases can't be handled by us
+                // Because in plex there is no concept of these
                 case "notinteresting":
                   break;
                 case "hold":
@@ -506,7 +514,7 @@ const startBgSync = async (signal) => {
             }
             break;
           case MediaType.anime:
-            // TODO(#26): handle anime differently, skip for now
+            // TODO(#26): handle anime differently
             // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
             // as a reference
             // let tvdbSlugsS = [];
@@ -525,7 +533,6 @@ const startBgSync = async (signal) => {
                 .filter((m) => m);
               if (plexAnime.length > 0) {
                 consoledebug("Anime was found in plex library", plexAnime)();
-                // await sleep(300);
               } else {
                 // consoledebug(
                 //   "Anime was not found in plex library",
@@ -539,9 +546,15 @@ const startBgSync = async (signal) => {
               // }
               switch (anime.status) {
                 case "completed":
+                  // TODO: mark whole thing as watched
                   break;
                 case "watching":
+                  // TODO: see what items are watched
+                  // and efficiently mark them as watched
+                  // i.e. if a whole season is done use season watched plex api method
                   break;
+                // The next 3 cases can't be handled by us
+                // Because in plex there is no concept of these
                 case "notinteresting":
                   break;
                 case "hold":

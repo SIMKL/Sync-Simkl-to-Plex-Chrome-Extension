@@ -18,6 +18,11 @@ sed -i -r "s/const DEVELOPMENT_FETCH_REQS=(true|false);//g" dist/js/common.js
 # this will remove the loggin logic entirely
 sed -i -r "s/const devLoggerSetup=\(.*\};/const devloggerSetup=_=>_=>\{\}\;/g" dist/js/common.js
 
+# prevent tests from bundling
+rm -rf dist/tests
+rm -f dist/js/vendor/quint-2.18.0.js
+rm -f dist/css/vendor/quint-2.8.0-dark.css
+
 set +ex
 
 if [ ! -f dist/js/background/env.js ]; then
