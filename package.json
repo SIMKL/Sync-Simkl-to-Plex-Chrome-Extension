@@ -10,7 +10,7 @@
     "test": "echo \"Error: Tests not yet implemented\" && exit 1",
     "build": "run-script-os",
     "build:darwin:linux": "sh scripts/build.sh && npm run build:pack",
-    "build:win32": ".\\scripts\\build.bat && npm run build:pack",
+    "build:win32": ".\\scripts\\build.ps1 && npm run build:pack",
     "build:pack": "web-ext build -s dist -a artifacts/chrome -n '{name}-{version}-chrome.zip' --overwrite-dest"
   },
   "repository": {

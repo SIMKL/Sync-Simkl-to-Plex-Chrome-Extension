@@ -17,7 +17,7 @@ $content `
     -replace 'const DEVELOPMENT_FETCH_REQS=(true|false)', '' `
     -replace 'const devLoggerSetup=\(.*', 'const devloggerSetup=_=>_=>{};' `
     -replace 'return Function.prototype.bind.*;};$', '' | `
-    Out-File -FilePath dist\js\common.js
+    Out-File -Encoding utf8 -FilePath dist\js\common.js
 
 # prevent tests from bundling
 Remove-Item -Recurse -ErrorAction SilentlyContinue dist\tests
@@ -29,7 +29,7 @@ if (-Not (Test-Path dist\js\background\env.js) ) {
 const SimklClientID = "$env:SIMKL_CLIENT_ID";
 const SimklClientSecret = "$env:SIMKL_CLIENT_SECRET";
 "@
-    $content | Out-File -FilePath dist\js\background\env.js
+    $content | Out-File -Encoding utf8 -FilePath dist\js\background\env.js
 }
 
 # validate generated js files for syntax
@@ -37,11 +37,11 @@ Set-PSDebug -Trace 0
 
 $env:NO_COLOR = 1
 Get-ChildItem -Path dist -Filter *.js -Recurse | Foreach-Object {
-    Write-Host `n "node -c $($_.FullName)"
+    Write-Host "node -c $($_.FullName)"
     (Get-Content $_.FullName) `
         -replace "consoledebug\([^;]*\)\(\);", ";" `
         -replace "console.debug\([^;]*\);", ";" | `
-        Out-File -FilePath $_.FullName
+        Out-File -Encoding utf8 -FilePath $_.FullName
     minify -o $_.FullName $_.FullName
     node -c $_.FullName
     if (-Not $?) {
