@@ -4,6 +4,12 @@
     "description": "Sync Simkl watch history to your plex account",
     "homepage_url": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension",
     "version": "0.0.1",
+    "icons": {
+        "16": "assets/icon-16x16.png",
+        "48": "assets/icon-48x48.png",
+        "128": "assets/icon-128x128.png",
+        "512": "assets/icon-512x512.png"
+    },
     "background": {
         "service_worker": "/js/background/background.js"
     },
@@ -13,7 +19,6 @@
     },
     "host_permissions": [
         "http://edjlcleicmcdpapdcobooenkchaehdib/*",
-        "https://*.google.com/*",
         "https://api.simkl.com/*",
         "https://*.plex.tv/*"
     ],
