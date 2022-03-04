@@ -373,11 +373,17 @@ This document describes the development workflow that went into this project.
 #### `4/3/2/2022`
 
 - `@phanirithvij`
+
   - Everything was going smoothly (not really) and then boom, the chrome update to latest stable version `99.0.4844.51` broke service worker message passing.
+
     - Lots of `Uncaught (in promise) Error: The message port closed before a response was received.` errors with the exact same code as before.
     - And it runs perfectly fine with no errors on the previous stable chrome version `98.0.4758.102`.
     - maybe related https://crbug.com/1296492
     - [update channel](https://chromereleases.googleblog.com/2022/03/stable-channel-update-for-desktop.html)
+    - [ ] Fix this
+      - Might require massive restructuring and removing the uses of `chrome.runtime.sendMessage`, maybe use `chrome.tabs.sendMessage`idk.
+      - If using `chrome.tabs.sendMessage` instead of `chrome.runtime.sendMessage` and also manifest v2 thus background page instead of service workers, we won't be affected.
+
   - Found another bug with chrome service workers (how surprising)
     - `webRequest.onBeforeRequest` won't trigger when service worker is inactive.
       - https://stackoverflow.com/q/66104520
@@ -392,8 +398,13 @@ This document describes the development workflow that went into this project.
             - https://stackoverflow.com/a/66638224
             - Related:
               - https://crbug.com/1241397
-          - It did not come without any added burden though
-            now user sees `Block content on any page` for our extension permission because `declarativeNetRequest` which makes no sense to regular users.
+          - It did not come without any added burden though,
+            now user sees `Block content on any page` for our extension permission because of `declarativeNetRequest`, which makes no sense to regular users on why simkl needs to block requests.
+  - TODO:
+    - Document every function
+    - Refactor all functions so that
+      - they feel systematic and clean
+      - they allow proper modular unit testing
 
 #### Notes (`@phanirithvij`)
 

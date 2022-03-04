@@ -249,18 +249,21 @@ const onLoad = async () => {
       }
     }
   });
-  syncNowBtn.addEventListener("click", async (_) => {
-    if (!document.body.classList.contains("sync-waiting-for-next-sync")) {
-      return;
-    }
-    // Force sync
-    consoledebug("starting syncing manually before next scheduled sync")();
-    let message = {
-      type: CallType.call,
-      method: CallType.bg.sync.start,
-    };
-    await chrome.runtime.sendMessage(message);
-  });
+  syncNowBtn.addEventListener(
+    "click",
+    debounce(async () => {
+      if (!document.body.classList.contains("sync-waiting-for-next-sync")) {
+        return;
+      }
+      // Force sync
+      consoledebug("starting syncing manually before next scheduled sync")();
+      let message = {
+        type: CallType.call,
+        method: CallType.bg.sync.start,
+      };
+      await chrome.runtime.sendMessage(message);
+    })
+  );
 
   handleHashRoutes();
   // load settings from local storage and update UI
@@ -433,16 +436,14 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
   return true;
 });
 
-// TODO move this logic to service worker
+// TODOO: move this logic to service worker
 // or else retry logic will only work when a tab is open
 const retrySyncWithBackoff = async (
   className = "error-simkl-url-unexpected",
   maxRetries = MaxRetryCount
 ) => {
   document.body.classList.add(className);
-  let failedTries = (await chrome.storage.local.get({ failedTries: 0 }))[
-    "failedTries"
-  ];
+  let { failedTries } = await chrome.storage.local.get({ failedTries: 0 });
   await chrome.storage.local.set({
     failedTries: failedTries + 1,
   });
@@ -454,22 +455,28 @@ const retrySyncWithBackoff = async (
     });
     return true;
   }
-  let backOff = Math.min(Math.pow(2, failedTries), 30);
+  let backOffmult = Math.min(Math.pow(2, failedTries), 30);
   restartLibrarySync(
     (await chrome.storage.local.get({ syncPeriod: DefaultSyncPeriod }))[
       "syncPeriod"
     ],
     false,
-    backOff * 1000 || 10000
+    backOffmult * 1000 || BackoffMaxLimit
   );
   setTimeout(() => {
     // auto dismiss in 10 secs
     // the other way to dismiss is to modify the url
     document.body.classList.remove(className);
-  }, backOff * 1000 || 10000);
+  }, backOffmult * 1000 || BackoffMaxLimit);
 };
 
 const startNextSyncTimer = async () => {
+  // FIXME: there is a bug with this as well
+  // the timer and sync now buttons disappear sometimes
+  // will reapper when the page is reloaded but
+  // it occurs randomly
+  // use `sync now` button multiple times to reproduce it
+  // then debug it.
   let signal = null;
   if (!!window.timerAbortC) {
     // TODO(#35): to comibne multiple signals
@@ -510,7 +517,7 @@ const pingServiceWorker = async () => {
   consoledebug("ping service worker")();
   // ping service worker every 2 minutes
   window.pingerHandle && clearInterval(pingerHandle);
-  window.pingerHandle = setInterval(pingServiceWorker, 120 * 1000);
+  window.pingerHandle = setInterval(pingServiceWorker, 20 * 1000);
   let m = {
     type: CallType.call,
     method: CallType.bg.sw.ping,
@@ -525,5 +532,5 @@ const pingServiceWorker = async () => {
     }
     consoledebug("service worker did not respond after 6sec", window.swPong)();
     unresponsiveServiceWorkerAlert();
-  }, 6000);
+  }, ServiceWorkerPingTimeout);
 };

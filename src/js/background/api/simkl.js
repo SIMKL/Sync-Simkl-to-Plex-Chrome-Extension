@@ -115,13 +115,14 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     return true;
   };
 
-  const getAllItems = async (
-    { dates = {}, token },
-    responseChannel,
-    signal
-  ) => {
-    consoledebug("getAllItems: ", dates, token)();
-    let types = ["shows", "movies", "anime"];
+  const getAllItems = async ({ dates, token }, responseChannel, signal) => {
+    consoledebug("getAllItems: ", dates)();
+    let types =
+      dates == null
+        ? // dates will be null if full sync
+          [MediaType.anime, MediaType.shows, MediaType.movies]
+        : // only loop over provided date types
+          Object.keys(dates);
     let serverTime;
     try {
       let responses = await Promise.all(
@@ -129,7 +130,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
           fetch(
             `https://api.simkl.com/sync/all-items/${type}?` +
               "episode_watched_at=yes" +
-              (type in dates ? `&date_from=${dates[type]}` : "") +
+              (dates && type in dates ? `&date_from=${dates[type]}` : "") +
               (type == "movies" ? "" : "&extended=full"),
             {
               headers: {
@@ -161,13 +162,24 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
           }
         })
       );
+      if (!serverTime) {
+        serverTime = await _determineServerTime(null);
+      }
       if (!!responseChannel) {
-        Object.keys(data).length == 3
+        // TODO: remove this, responseChannel is unused
+        Object.keys(data).length == types.length
           ? responseChannel(makeSuccessResponse(data))
           : responseChannel(makeErrorResponse(data));
       }
-      return { success: Object.keys(data).length == 3, data, serverTime };
+      return {
+        success: Object.keys(data).length == types.length,
+        data,
+        serverTime,
+      };
     } catch (error) {
+      if (!serverTime) {
+        serverTime = await _determineServerTime(null);
+      }
       return { success: false, error: error, serverTime };
     }
   };
@@ -175,22 +187,32 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   const _determineServerTime = async (simklResp) => {
     let st = null;
     // get it from simkl date header
-    if (simklResp.headers.has("date")) {
+    if (simklResp && simklResp.headers.has("date")) {
       st = new Date(simklResp.headers.get("date")).toISOString();
+      consoledebug("saving simkl api's response server time")();
       return st;
     }
-    // fallback to google's date header
-    let googtime = await fetch("https://google.com", {
-      method: "HEAD",
-    }).catch((_) => {});
-
-    if (googtime.headers.has("date")) {
-      st = new Date(googtime.headers.get("date")).toISOString();
-      return st;
+    // fallback to simkl's date header
+    try {
+      // here don't send a request to a valid url
+      // https://api.simkl.com redirects to apiary
+      let simkltime = await fetch("https://api.simkl.com/invalid_url_route", {
+        method: "HEAD",
+      }).catch((err) => {
+        throw err;
+      });
+      if (simkltime.headers.has("date")) {
+        st = new Date(simkltime.headers.get("date")).toISOString();
+        consoledebug("requesting simkl api's server time")();
+        return st;
+      }
+    } catch (err) {
+      // Can try plex.tv server's date
     }
     // worst case scenario: use client's clock time
     let now = new Date().toISOString();
     st = now;
+    console.debug("Fallback to client's clock time", st, err);
     return st;
   };
 

@@ -50,16 +50,6 @@ class UIEvents {
           : ActionType.ui.sync.simkl.connectdone,
     });
   };
-
-  static syncStarted = (api = "plex") => {
-    chrome.runtime.sendMessage({
-      type: ActionType.action,
-      action:
-        api == "plex"
-          ? ActionType.ui.sync.plex.connectdone
-          : ActionType.ui.sync.simkl.connectdone,
-    });
-  };
 }
 
 const userConfig = async () => {
@@ -311,20 +301,20 @@ const startBgSync = async (signal) => {
       UIEvents.connectFailed("plex");
       return;
     }
-    consoledebug("plex libraries", libraries)();
+    console.log("plex libraries", libraries);
     let plexMediaList = await getPlexMediaList(libraries, pconf);
     const plexMovieList = plexMediaList.map((l) =>
       l.filter((item) => item.type == "movie")
     );
-    consoledebug("movies", plexMovieList)();
+    console.log("movies", plexMovieList);
     const plexEpisodesList = plexMediaList.map((l) =>
       l.filter((item) => item.type == "episode")
     );
-    consoledebug("episodes", plexEpisodesList)();
+    console.log("episodes", plexEpisodesList);
     let plexShowList = await getPlexShowList(libraries, pconf);
-    consoledebug("shows", plexShowList)();
+    console.log("shows", plexShowList);
     let plexSeasonList = await getPlexSeasonsList(libraries, pconf);
-    consoledebug("seasons", plexSeasonList)();
+    console.log("seasons", plexSeasonList);
 
     // guid look up tables
     let movieGuidLut = await plexLibraryGuidLut(plexMediaList, pconf);
@@ -337,11 +327,14 @@ const startBgSync = async (signal) => {
     // Simkl
 
     UIEvents.connectStarted("simkl");
-    let { doFullSync } = await chrome.storage.local.get({
-      doFullSync: false,
+    let { doFullSync, lastSynced } = await chrome.storage.local.get({
+      // assume full sync by default
+      doFullSync: true,
+      // assume we never synced before
+      lastSynced: null,
     });
 
-    let dates = {};
+    let dates = null;
     if (!doFullSync) {
       // get simkl last activity
       let la = await __API__.simkl.apis.getLastActivity(simklOauthToken);
@@ -360,17 +353,45 @@ const startBgSync = async (signal) => {
         return;
       }
       consoledebug(simklLastActivity)();
-      dates = {
-        anime: simklLastActivity[MediaType.anime]["all"],
-        movies: simklLastActivity[MediaType.movies]["all"],
-        shows: simklLastActivity["tv_shows"]["all"], // is not shows but tv_shows
-      };
-    } else {
-      consoledebug("Doing a full sync")();
+      if (lastSynced) {
+        consoledebug("last sucessful sync on", lastSynced)();
+        /* 
+          Simkl has 2 endpoints
+            - one to get user's last activity and
+            - the other to get a user's all items.
+          The all items endpoint takes in a date (optionally) and
+          the last activity endpoint returns last activity time for each section.
+        */
+        dates = {};
+        [MediaType.anime, MediaType.movies, MediaType.shows].forEach((type) => {
+          let lastActiveTime =
+            simklLastActivity[type == MediaType.shows ? "tv_shows" : type][
+              "all"
+            ];
+          /*
+            do not use direct ISO string comparison
+            because they could be in a different timezones
+              - if server deployment changes
+              - or if we are falling back to local users's time
+          */
+          if (new Date(lastActiveTime) > new Date(lastSynced)) {
+            dates[type] = lastSynced;
+          } else {
+            // last activity was older than when we last synced
+            // so no need to fetch anything for this type.
+          }
+        });
+        console.log("Doing a sync of all items from", lastSynced);
+      } else {
+        doFullSync = true;
+      }
     }
+    if (doFullSync) {
+      console.log("Doing a full sync");
+    }
+    consoledebug(dates)();
 
     // get simkl history
-    consoledebug(dates)();
     let {
       success,
       data: simklChanges,
@@ -418,21 +439,25 @@ const startBgSync = async (signal) => {
         // mediaType ∈ {'anime', 'movies', 'shows'}
         switch (mediaType) {
           case MediaType.movies:
-            for (let movie of simklChanges[mediaType]) {
-              if (!movie.movie.ids) {
-                consoledebug("Movie has no ids", movie)();
+            for (let simklMovie of simklChanges[mediaType]) {
+              if (!simklMovie.movie.ids) {
+                consoledebug("Movie has no ids", simklMovie)();
                 continue;
               }
               currentIdx++;
               pMessage.value = totalSyncCount - currentIdx;
               chrome.runtime.sendMessage(pMessage);
 
-              let mPlexids = simklIdsToPlexIds(movie.movie, mediaType);
+              let mPlexids = simklIdsToPlexIds(simklMovie.movie, mediaType);
               let plexMovie = mPlexids
                 .map((id) => movieGuidLut[id])
                 .filter((m) => m);
               if (plexMovie.length > 0) {
-                consoledebug("Movie was found in plex library", plexMovie)();
+                consoledebug(
+                  "Movie",
+                  plexMovie[0].title,
+                  "was found in plex library"
+                )();
               } else {
                 // consoledebug(
                 //   "Movie was not found in plex library",
@@ -443,12 +468,13 @@ const startBgSync = async (signal) => {
               // movie.status
               // movie.user_rating
               // consoledebug(movie)();
-              switch (movie.status) {
+              switch (simklMovie.status) {
                 case "completed":
                   await __API__.plex.apis.markMovieWatched({
                     ...pconf,
                     movieKey: plexMovie[0].ratingKey,
                     name: plexMovie[0].title,
+                    userRating: simklMovie.user_rating,
                   });
                   break;
                 case "plantowatch":
@@ -457,30 +483,39 @@ const startBgSync = async (signal) => {
                 case "notinteresting":
                   // not possible to do anything here
                   // we can't delete a single item
-                  // or mark it as notintersting in a plex library
+                  // or mark it as notinteresting in a plex library
                   break;
                 default:
+                  // TODO: there is no deleted events from /all-items
+                  // i.e if a movie or show is removed from user's list in simkl
+                  // then we can't know of it.
+                  // unless we cache the full history and compare it with user's history everytime
+                  // (using `unlimitedStorage` https://developer.chrome.com/docs/extensions/reference/storage/#property)
                   break;
               }
             }
             break;
           case MediaType.shows:
-            for (let show of simklChanges[mediaType]) {
-              if (!show.show.ids) {
-                consoledebug("Show has no ids", show)();
+            for (let simklShow of simklChanges[mediaType]) {
+              if (!simklShow.show.ids) {
+                consoledebug("Show has no ids", simklShow)();
                 continue;
               }
               currentIdx++;
               pMessage.value = totalSyncCount - currentIdx;
               chrome.runtime.sendMessage(pMessage);
 
-              let mPlexids = simklIdsToPlexIds(show.show, mediaType);
+              let mPlexids = simklIdsToPlexIds(simklShow.show, mediaType);
               let plexShow = mPlexids
                 .map((id) => showsGuidLut[id])
                 .filter((m) => m);
               if (plexShow.length > 0) {
-                consoledebug("Show was found in plex library", plexShow)();
-                console.log(plexShow);
+                // console.log(
+                //   "Show",
+                //   plexShow[0].title,
+                //   "was found in plex library",
+                //   plexShow[0]
+                // );
               } else {
                 // consoledebug(
                 //   "Show was not found in plex library",
@@ -491,14 +526,62 @@ const startBgSync = async (signal) => {
               // show.status
               // show.user_rating
               // show.seasons
-              switch (show.status) {
+              switch (simklShow.status) {
                 case "completed":
-                  // TODO: mark whole thing as watched
+                  // mark whole thing as watched
+                  await __API__.plex.apis.markShowWatched({
+                    ...pconf,
+                    showKey: plexShow[0].ratingKey,
+                    name: plexShow[0].title,
+                    userRating: simklShow.user_rating,
+                  });
                   break;
                 case "watching":
                   // TODO: see what items are watched
                   // and efficiently mark them as watched
                   // i.e. if a whole season is done use season watched plex api method
+                  consoledebug(
+                    "Show",
+                    plexShow[0].title,
+                    "was found in plex library"
+                    // plexShow[0],
+                    // simklShow
+                  )();
+                  let seasons = plexSeasonList.map((l) =>
+                    l.filter((s) => s.parentRatingKey == plexShow[0].ratingKey)
+                  );
+                  if (
+                    simklShow.watched_episodes_count ==
+                    simklShow.total_episodes_count
+                  ) {
+                    // mark all seasons as watched
+                    seasons.forEach((l) => {
+                      l.forEach((s) => {
+                        __API__.plex.apis.markSeasonWatched({
+                          ...pconf,
+                          seasonKey: s.ratingKey,
+                          name: `${plexShow[0].title}: ${s.title}`,
+                        });
+                      });
+                    });
+                  } else {
+                    // TODO: season by season? episode by episode?
+                    // detect if a season has been fully watched
+                    // if so need to be careful with sending too many requests to plex
+                  }
+                  if (simklShow.user_rating) {
+                    await __API__.plex.apis.rateMediaItem(
+                      {
+                        ...pconf,
+                        plexRatingKey: plexShow[0].ratingKey,
+                        info: {
+                          name: plexShow[0].title,
+                          type: "show",
+                        },
+                      },
+                      simklShow.user_rating
+                    );
+                  }
                   break;
                 // The next 3 cases can't be handled by us
                 // Because in plex there is no concept of these
@@ -625,10 +708,13 @@ const startBgSync = async (signal) => {
 
 const syncDone = async (serverTime) => {
   // sync done
+  consoledebug("Saving server time", serverTime);
   await chrome.storage.local.set({
     lastSynced: serverTime,
   });
-  await chrome.storage.local.remove("doFullSync");
+  // comment this line to make `sync now` do fullsyncs everytime
+  // useful for debugging, don't forget to uncomment this after done
+  // await chrome.storage.local.remove("doFullSync");
   let doneMsg = {
     type: ActionType.action,
     action: ActionType.ui.sync.finished,

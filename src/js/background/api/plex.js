@@ -493,24 +493,6 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     }
   };
 
-  const markMovieWatched = (
-    { plexToken, plexApiBaseURL, movieKey, name },
-    markUnwatched = false
-  ) => {
-    return scrobbleKey(
-      {
-        plexToken,
-        plexApiBaseURL,
-        plexRatingKey: movieKey,
-        info: {
-          type: "movie",
-          name: name,
-        },
-      },
-      markUnwatched
-    );
-  };
-
   const markEpisodeWatched = (
     { plexToken, plexApiBaseURL, episodeKey, name },
     markUnwatched = false
@@ -548,32 +530,52 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   };
 
   const markShowWatched = (
-    { plexToken, plexApiBaseURL, showKey, name },
+    { plexToken, plexApiBaseURL, showKey, name, userRating = null },
     markUnwatched = false
   ) => {
-    return scrobbleKey(
-      {
-        plexToken,
-        plexApiBaseURL,
-        plexRatingKey: showKey,
-        info: {
-          type: "show",
-          name: name,
-        },
+    let details = {
+      plexToken,
+      plexApiBaseURL,
+      plexRatingKey: showKey,
+      info: {
+        type: "show",
+        name: name,
       },
-      markUnwatched
-    );
+    };
+    return Promise.all([
+      scrobbleKey(details, markUnwatched),
+      rateMediaItem(details, userRating),
+    ]);
+  };
+
+  const markMovieWatched = (
+    { plexToken, plexApiBaseURL, movieKey, name, userRating = null },
+    markUnwatched = false
+  ) => {
+    let details = {
+      plexToken,
+      plexApiBaseURL,
+      plexRatingKey: movieKey,
+      info: {
+        type: "movie",
+        name: name,
+      },
+    };
+    return Promise.all([
+      scrobbleKey(details, markUnwatched),
+      rateMediaItem(details, userRating),
+    ]);
   };
 
   const scrobbleKey = async (
     { plexToken, plexApiBaseURL, plexRatingKey, info },
     markUnwatched = false
   ) => {
-    consolelog(
+    console.log(
       `Marking ${info.type} ${info.name} with key ${plexRatingKey}: ${
         markUnwatched ? "un" : ""
       }watched`
-    )();
+    );
     return;
     try {
       let resp = await fetch(
@@ -595,6 +597,45 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       }
     } catch (error) {
       broadcastOnlineStatus(false);
+    }
+  };
+
+  // can rate episode, movie, season, show
+  const rateMediaItem = async (
+    { plexToken, plexApiBaseURL, plexRatingKey, info },
+    rating = null
+  ) => {
+    // not defined
+    if (!rating) return;
+    console.log(
+      `Rating ${info.type} ${info.name} with key ${plexRatingKey}: as ${rating}/10`
+    );
+    return;
+    try {
+      let resp = await fetch(
+        `${plexApiBaseURL}:/rate?` +
+          stringifyPlex({
+            identifier: "com.plexapp.plugins.library",
+            key: plexRatingKey,
+            rating: rating,
+          }),
+        {
+          headers: {
+            accept: "application/json, text/plain, */*",
+            "x-plex-text-format": "plain",
+            "x-plex-token": plexToken,
+          },
+          method: "PUT",
+        }
+      ).catch(throwError);
+      broadcastOnlineStatus();
+      if (resp.status == 200) {
+        return { error: null };
+      }
+      return { status: resp.status, error: "failed" };
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      return { error };
     }
   };
 
@@ -636,39 +677,6 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       return {};
     } catch (error) {
       broadcastOnlineStatus(false);
-    }
-  };
-
-  // can rate episode, movie, season, show
-  const rateMediaItem = async (
-    { plexToken, plexApiBaseURL, plexRatingKey },
-    rating
-  ) => {
-    try {
-      let resp = await fetch(
-        `${plexApiBaseURL}:/rate?` +
-          stringifyPlex({
-            identifier: "com.plexapp.plugins.library",
-            key: plexRatingKey,
-            rating: rating,
-          }),
-        {
-          headers: {
-            accept: "application/json, text/plain, */*",
-            "x-plex-text-format": "plain",
-            "x-plex-token": plexToken,
-          },
-          method: "PUT",
-        }
-      ).catch(throwError);
-      broadcastOnlineStatus();
-      if (resp.status == 200) {
-        return { error: null };
-      }
-      return { status: resp.status, error: "failed" };
-    } catch (error) {
-      broadcastOnlineStatus(false);
-      return { error };
     }
   };
 

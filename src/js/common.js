@@ -3,12 +3,14 @@
 const DefaultSyncPeriod = 12;
 const MaxRetryCount = 6;
 const AlarmKey = "plex-libray-sync";
+const ServiceWorkerPingTimeout = 5 * 1000;
+const BackoffMaxLimit = 10 * 1000;
 // TODO(#28): Simkl uninstall feedback url
 const UNINSTALL_URL =
   "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
 // this will be set to false in prod by the build scripts
 const DEVELOPMENT = true;
-const DEVELOPMENT_FETCH_REQS = true;
+// const DEVELOPMENT_FETCH_REQS = true;
 
 // Utils
 
