@@ -164,6 +164,17 @@ const handleOauthIntercepts = async ({ tabId, url }) => {
   }
 };
 
+// FIXED:
+// Bug when chrome kills the service worker this handler is dead immediately
+// so users will reach the http://chrome_ext_id page and it won't redirect back to chrome-extension
+// Can be reproduced by logging out of simkl first (at https://simkl.com/logout)
+// and then try connect simkl, then do simkl login (email/fb/whatever)
+// then the next redirect will be the page with DNS_PROBE_FINISHED_NXDOMAIN
+// SOLUTION:
+// Was solved by using `declarativeNetRequest` and `web_accessible_resources`
+// read the devlog entry for 4/3/2022
+// TODO: move the above comments along with other BUGLOCs
+// to github issues
 chrome.webRequest.onBeforeRequest.addListener(
   (details) => {
     consoledebug("On Before request")();

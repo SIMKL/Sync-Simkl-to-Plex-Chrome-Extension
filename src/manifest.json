@@ -12,14 +12,32 @@
         "default_title": "Simkl>Plex"
     },
     "host_permissions": [
-        "http://fdoomgaljjnbjgfijmbomnalapkmjifl/*",
-        "http://pimjhldidlmjogipgpnphmemagpcopaa/*",
         "http://edjlcleicmcdpapdcobooenkchaehdib/*",
         "https://*.google.com/*",
         "https://api.simkl.com/*",
         "https://*.plex.tv/*"
     ],
+    "declarative_net_request": {
+        "rule_resources": [
+            {
+                "id": "ruleset_1",
+                "enabled": true,
+                "path": "rules.json"
+            }
+        ]
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "popup.html"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ],
     "permissions": [
+        "declarativeNetRequest",
         "contextMenus",
         "webRequest",
         "alarms",

@@ -10,3 +10,6 @@ artifacts/
 qunit-results.png
 *.pem
 *.crx
+
+# chrome generates this
+_metadata/

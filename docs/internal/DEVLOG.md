@@ -370,6 +370,31 @@ This document describes the development workflow that went into this project.
     - [ ] Add unit tests
       - Maybe unit tests can be included in the beta test for others?
 
+#### `4/3/2/2022`
+
+- `@phanirithvij`
+  - Everything was going smoothly (not really) and then boom, the chrome update to latest stable version `99.0.4844.51` broke service worker message passing.
+    - Lots of `Uncaught (in promise) Error: The message port closed before a response was received.` errors with the exact same code as before.
+    - And it runs perfectly fine with no errors on the previous stable chrome version `98.0.4758.102`.
+    - maybe related https://crbug.com/1296492
+    - [update channel](https://chromereleases.googleblog.com/2022/03/stable-channel-update-for-desktop.html)
+  - Found another bug with chrome service workers (how surprising)
+    - `webRequest.onBeforeRequest` won't trigger when service worker is inactive.
+      - https://stackoverflow.com/q/66104520
+      - Can be easily verified by heading to `chrome://serviceworker-internals/` and making service worker inactive (or waiting for a few seconds before chrome kills the service worker) and then testing the redirect logic by manually visiting `http://<chrome_ext_id>/something`.
+      - Found a [solution](https://stackoverflow.com/a/66106191)
+        - Use `declarativeNetRequest` (again) but this time it works because it is defined in the manifest and chrome extension id can be fixed and hardcoded in the manifest and `rules.json`.
+        - This combined with `onBeforeRequest` should do the trick.
+        - It did indeed `do the trick` like I thought but there was the issue of `ERR_BLOCKED_BY_CLIENT` with `declarativeNetRequest` combined with server redirect.
+          - Luckily this was solved from `wOxxOm`'s feedback
+            - https://groups.google.com/a/chromium.org/g/chromium-extensions/c/QJ3y_EhkhG4
+            - https://crbug.com/1238301#c3
+            - https://stackoverflow.com/a/66638224
+            - Related:
+              - https://crbug.com/1241397
+          - It did not come without any added burden though
+            now user sees `Block content on any page` for our extension permission because `declarativeNetRequest` which makes no sense to regular users.
+
 #### Notes (`@phanirithvij`)
 
 - Oauth endpoints need to be handled in background.js because popup might close and we might lose the state.
@@ -385,3 +410,7 @@ This document describes the development workflow that went into this project.
 - Important: manifest `key` field should be removed when uploading to chrome webstore and also the key.pem file should be also zipped and uploaded the very first time.
   - So no need to automate the key.pem zipping in release workflow.
   - Publish to store
+  - key
+    ```json
+      "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs5UgzBFazS+AO+RJV5f7OaKe9wYM5d6Ozjw7TkHEvgDDHyUmI23dVSF18dR96bX7JgY2Weh9wSDyz26JqgnUBvD4zUKrpURadira3vdvD0Hft3RlCc+GE53dlXFiugbDLzWIB+TmqxlF0N1sBbodyU7oc4FXz4nP0buR/PzqVrBE1hh1wfR9X7HBwN2RJf1bT5QRYQYGLZr3KxofwPLRMPLqCphAjmP1mzL+wiwxrCjBFQLGHQs/Ki0R2DL+RxCeK3fufDyIx6xmrjRHeuCL70asfUjfGU0ehsZgT3sO+4DKtoo2JaK7j1owuywqrlHkAuZ8IUVI5JiM0k4Lyp3cTwIDAQAB",
+    ```
