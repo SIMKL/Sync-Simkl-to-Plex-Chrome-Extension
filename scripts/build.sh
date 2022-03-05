@@ -12,11 +12,11 @@ minify -r -o dist/ src
 # remove dev stuff
 # comment one of the following lines to enable debugging
 # this will disable console logs
-sed -i "s/DEVELOPMENT=true/DEVELOPMENT=false/g" dist/js/common.js
+# sed -i "s/DEVELOPMENT=true/DEVELOPMENT=false/g" dist/js/common.js
 # this will disable uploading to logger
 sed -i -r "s/const DEVELOPMENT_FETCH_REQS=(true|false);//g" dist/js/common.js
 # this will remove the loggin logic entirely
-sed -i -r "s/const devLoggerSetup=\(.*\};/const devloggerSetup=_=>_=>\{\}\;/g" dist/js/common.js
+# sed -i -r "s/const devLoggerSetup=\(.*\};/const devloggerSetup=_=>_=>\{\}\;/g" dist/js/common.js
 
 # prevent tests from bundling
 rm -rf dist/tests
@@ -34,8 +34,8 @@ fi
 
 for i in $(find dist -type f -name "*.js"); do
     # removing consoledebug calls
-    sed -i -r "s/consoledebug\([^;]*\)\(\);/;/g" "$i"
-    sed -i -r "s/console.debug\([^;]*\);/;/g" "$i"
+    # sed -i -r "s/consoledebug\([^;]*\)\(\);/;/g" "$i"
+    # sed -i -r "s/console.debug\([^;]*\);/;/g" "$i"
     minify -o $i $i
     # validate generated js files for syntax
     echo + "node -c $i"

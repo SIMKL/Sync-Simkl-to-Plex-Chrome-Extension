@@ -13,11 +13,11 @@ $content = (Get-Content -Path dist\js\common.js)
 # so split them to two replaces one per match
 # can't comment between ` escaped lines
 $content `
-    -replace 'DEVELOPMENT=true', 'DEVELOPMENT=false' `
-    -replace 'const DEVELOPMENT_FETCH_REQS=(true|false)', '' `
-    -replace 'const devLoggerSetup=\(.*', 'const devloggerSetup=_=>_=>{};' `
-    -replace 'return Function.prototype.bind.*;};$', '' | `
+    -replace 'const DEVELOPMENT_FETCH_REQS=(true|false)', '' | `
     Out-File -Encoding utf8 -FilePath dist\js\common.js
+    # -replace 'DEVELOPMENT=true', 'DEVELOPMENT=false' `
+    # -replace 'const devLoggerSetup=\(.*', 'const devloggerSetup=_=>_=>{};' `
+    # -replace 'return Function.prototype.bind.*;};$', '' | `
 
 # prevent tests from bundling
 Remove-Item -Recurse -ErrorAction SilentlyContinue dist\tests
@@ -38,10 +38,10 @@ Set-PSDebug -Trace 0
 $env:NO_COLOR = 1
 Get-ChildItem -Path dist -Filter *.js -Recurse | Foreach-Object {
     Write-Host "node -c $($_.FullName)"
-    (Get-Content $_.FullName) `
-        -replace "consoledebug\([^;]*\)\(\);", ";" `
-        -replace "console.debug\([^;]*\);", ";" | `
-        Out-File -Encoding utf8 -FilePath $_.FullName
+    # (Get-Content $_.FullName) `
+    #     -replace "consoledebug\([^;]*\)\(\);", ";" `
+    #     -replace "console.debug\([^;]*\);", ";" | `
+    #     Out-File -Encoding utf8 -FilePath $_.FullName
     minify -o $_.FullName $_.FullName
     node -c $_.FullName
     if (-Not $?) {
