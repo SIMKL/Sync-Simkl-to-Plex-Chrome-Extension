@@ -726,7 +726,7 @@ const startBgSync = async (signal) => {
       }
     }
 
-    await syncDone(serverTime);
+    syncDone(serverTime);
   } else {
     if (!simklOauthToken) {
       UIEvents.tokenExpired("simkl");
@@ -748,20 +748,20 @@ const startBgSync = async (signal) => {
   }
 };
 
-const syncDone = async (serverTime) => {
+const syncDone = (serverTime) => {
   // sync done
   consoledebug("Saving server time", serverTime);
-  await chrome.storage.local.set({
+  chrome.storage.local.set({
     lastSynced: serverTime,
+    // can set this to true to always do a full sync
+    // when using the sync now button
+    doFullSync: false,
   });
-  // comment this line to make `sync now` do fullsyncs everytime
-  // useful for debugging, don't forget to uncomment this after done
-  await chrome.storage.local.remove("doFullSync");
   let doneMsg = {
     type: ActionType.action,
     action: ActionType.ui.sync.finished,
   };
-  await chrome.runtime.sendMessage(doneMsg);
+  chrome.runtime.sendMessage(doneMsg);
 };
 
 /*
@@ -813,6 +813,7 @@ const simklAnimeIdstoPlexIds = (media) =>
 // unused might required for later
 
 const fetchAniDBTvDBMappings = async (signal) => {
+  return;
   try {
     let resp = await fetch(
       "https://raw.githubusercontent.com/Anime-Lists/anime-lists/master/anime-list.xml",
