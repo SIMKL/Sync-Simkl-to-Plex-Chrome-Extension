@@ -249,10 +249,24 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     }
   };
 
+  const getShowEpisodeList = async (token, showID) => {
+    let resp = await fetch(`https://api.simkl.com/tv/episodes/${showID}`, {
+      headers: {
+        "Content-Type": "application/json",
+        "simkl-api-key": SimklClientID,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (resp.status == 200) {
+      return await resp.json();
+    }
+  };
+
   __API__.simkl.oauth.oauthStart = oauthStart;
   __API__.simkl.oauth.checkTokenValiditiy = checkTokenValiditiy;
 
   __API__.simkl.apis.getLastActivity = getLastActivity;
   __API__.simkl.apis.getAllItems = getAllItems;
   __API__.simkl.apis.getUserInfo = getUserInfo;
+  __API__.simkl.apis.getShowEpisodeList = getShowEpisodeList;
 })();

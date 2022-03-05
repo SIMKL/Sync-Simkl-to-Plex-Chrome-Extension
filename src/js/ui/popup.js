@@ -16,6 +16,7 @@ const restartLibrarySync = async (
       ? Date.now() + 100 // start immediately
       : Date.now() + runAfterMS,
     periodInMinutes: durationHours * 60,
+    // for debugging
     // periodInMinutes: 0.1,
   });
 };
@@ -517,7 +518,7 @@ const pingServiceWorker = async () => {
   consoledebug("ping service worker")();
   // ping service worker every 2 minutes
   window.pingerHandle && clearInterval(pingerHandle);
-  window.pingerHandle = setInterval(pingServiceWorker, 20 * 1000);
+  window.pingerHandle = setInterval(pingServiceWorker, ServiceWorkerPingInterval);
   let m = {
     type: CallType.call,
     method: CallType.bg.sw.ping,

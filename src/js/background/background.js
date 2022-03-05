@@ -15,7 +15,7 @@ importScripts("../vendor/txml@5.1.1.min.js");
 
 // Api methods to use globally
 
-let f = () => {};
+let f = async () => {};
 // this structure is required
 let __API__ = {
   plex: {
@@ -52,6 +52,7 @@ let __API__ = {
       getLastActivity: f,
       getAllItems: f,
       getUserInfo: f,
+      getShowEpisodeList: f,
     },
   },
 };

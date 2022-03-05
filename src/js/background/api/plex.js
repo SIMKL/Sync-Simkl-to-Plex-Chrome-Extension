@@ -505,6 +505,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         info: {
           type: "episode",
           name: name,
+          prefixStr: "|__ ",
         },
       },
       markUnwatched
@@ -530,7 +531,14 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   };
 
   const markShowWatched = (
-    { plexToken, plexApiBaseURL, showKey, name, userRating = null },
+    {
+      plexToken,
+      plexApiBaseURL,
+      showKey,
+      name,
+      userRating = null,
+      isAnime = false,
+    },
     markUnwatched = false
   ) => {
     let details = {
@@ -538,7 +546,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       plexApiBaseURL,
       plexRatingKey: showKey,
       info: {
-        type: "show",
+        type: isAnime ? "anime" : "show",
         name: name,
       },
     };
@@ -572,7 +580,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     markUnwatched = false
   ) => {
     console.log(
-      `Marking ${info.type} ${info.name} with key ${plexRatingKey}: ${
+      `${info.prefixStr || ""}Marking ${info.type} ${info.name}: ${
         markUnwatched ? "un" : ""
       }watched`
     );
@@ -605,11 +613,9 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     { plexToken, plexApiBaseURL, plexRatingKey, info },
     rating = null
   ) => {
-    // not defined
+    // rating not defined
     if (!rating) return;
-    console.log(
-      `Rating ${info.type} ${info.name} with key ${plexRatingKey}: as ${rating}/10`
-    );
+    console.log(`|__ Rating ${info.type} ${info.name}: as ${rating}/10`);
     return;
     try {
       let resp = await fetch(

@@ -140,6 +140,17 @@ const plexLibraryShowsLut = async (fullList, pconf) => {
   return guidLut;
 };
 
+const plexLibraryShowS0mE0nLut = (fullList) => {
+  // build a dict with keys showID-s0me0n and values episodes
+  let lut = {};
+  fullList.forEach((l) => {
+    l.forEach((e) => {
+      lut[`${e.grandparentRatingKey}-s${e.parentIndex}e${e.index}`] = e;
+    });
+  });
+  return lut;
+};
+
 const plexLibraryGuidLut = async (fullList, pconf) => {
   let guidLut = {};
   let unknownGuidList = [];
@@ -307,10 +318,10 @@ const startBgSync = async (signal) => {
       l.filter((item) => item.type == "movie")
     );
     console.log("movies", plexMovieList);
-    const plexEpisodesList = plexMediaList.map((l) =>
+    const plxEpisodesList = plexMediaList.map((l) =>
       l.filter((item) => item.type == "episode")
     );
-    console.log("episodes", plexEpisodesList);
+    console.log("episodes", plxEpisodesList);
     let plexShowList = await getPlexShowList(libraries, pconf);
     console.log("shows", plexShowList);
     let plexSeasonList = await getPlexSeasonsList(libraries, pconf);
@@ -321,6 +332,11 @@ const startBgSync = async (signal) => {
     consoledebug(movieGuidLut)();
     let showsGuidLut = await plexLibraryGuidLut(plexShowList, pconf);
     consoledebug(showsGuidLut)();
+    let episodeSeasonS0mE0nLut = plexLibraryShowS0mE0nLut(
+      plxEpisodesList,
+      pconf
+    );
+    consoledebug(episodeSeasonS0mE0nLut)();
 
     UIEvents.connectDone("plex");
 
@@ -496,20 +512,21 @@ const startBgSync = async (signal) => {
             }
             break;
           case MediaType.shows:
-            for (let simklShow of simklChanges[mediaType]) {
-              if (!simklShow.show.ids) {
-                consoledebug("Show has no ids", simklShow)();
+          case MediaType.anime:
+            for (let smkShow of simklChanges[mediaType]) {
+              if (!smkShow.show.ids) {
+                consoledebug("Show has no ids", smkShow)();
                 continue;
               }
               currentIdx++;
               pMessage.value = totalSyncCount - currentIdx;
               chrome.runtime.sendMessage(pMessage);
 
-              let mPlexids = simklIdsToPlexIds(simklShow.show, mediaType);
-              let plexShow = mPlexids
+              let mPlexids = simklIdsToPlexIds(smkShow.show, mediaType);
+              let plxShow = mPlexids
                 .map((id) => showsGuidLut[id])
                 .filter((m) => m);
-              if (plexShow.length > 0) {
+              if (plxShow.length > 0) {
                 // console.log(
                 //   "Show",
                 //   plexShow[0].title,
@@ -526,41 +543,49 @@ const startBgSync = async (signal) => {
               // show.status
               // show.user_rating
               // show.seasons
-              switch (simklShow.status) {
+              switch (smkShow.status) {
                 case "completed":
                   // mark whole thing as watched
                   await __API__.plex.apis.markShowWatched({
                     ...pconf,
-                    showKey: plexShow[0].ratingKey,
-                    name: plexShow[0].title,
-                    userRating: simklShow.user_rating,
+                    showKey: plxShow[0].ratingKey,
+                    name: plxShow[0].title,
+                    userRating: smkShow.user_rating,
+                    isAnime: mediaType == "anime",
                   });
                   break;
                 case "watching":
-                  // TODO: see what items are watched
+                // The next 3 cases can't be handled by us
+                // Because in plex there is no concept of these
+                // But all these states can have watched episodes and seasons
+                // so tream them as though they are same as `watching`
+                case "notinteresting":
+                case "hold":
+                case "plantowatch":
+                  // see what items were watched
                   // and efficiently mark them as watched
                   // i.e. if a whole season is done use season watched plex api method
                   consoledebug(
                     "Show",
-                    plexShow[0].title,
+                    plxShow[0].title,
                     "was found in plex library"
-                    // plexShow[0],
-                    // simklShow
                   )();
-                  let seasons = plexSeasonList.map((l) =>
-                    l.filter((s) => s.parentRatingKey == plexShow[0].ratingKey)
+                  let plxShowSeasons = plexSeasonList.map((l) =>
+                    l.filter((s) => s.parentRatingKey == plxShow[0].ratingKey)
                   );
                   if (
-                    simklShow.watched_episodes_count ==
-                    simklShow.total_episodes_count
+                    smkShow.watched_episodes_count +
+                      smkShow.not_aired_episodes_count ==
+                    smkShow.total_episodes_count
                   ) {
-                    // mark all seasons as watched
-                    seasons.forEach((l) => {
+                    // mark all aired seasons as watched
+                    plxShowSeasons.forEach((l) => {
                       l.forEach((s) => {
+                        plxEpisodesList.map((l) => {});
                         __API__.plex.apis.markSeasonWatched({
                           ...pconf,
                           seasonKey: s.ratingKey,
-                          name: `${plexShow[0].title}: ${s.title}`,
+                          name: `${plxShow[0].title}: ${s.title}`,
                         });
                       });
                     });
@@ -568,88 +593,105 @@ const startBgSync = async (signal) => {
                     // TODO: season by season? episode by episode?
                     // detect if a season has been fully watched
                     // if so need to be careful with sending too many requests to plex
+                    console.log(`Show ${plxShow[0].title}`);
+                    smkShow.seasons.forEach(async (smkSeason) => {
+                      console.log(`Season ${smkSeason.number}`);
+                      if ("total" in smkSeason) {
+                        if (smkSeason.total == smkSeason.episodes.length) {
+                          await __API__.plex.apis.markSeasonWatched({
+                            ...pconf,
+                            seasonKey: smkSeason.ratingKey,
+                            name: `${plxShow[0].title}: ${smkSeason.title}`,
+                          });
+                          return;
+                        }
+                      }
+                      smkSeason.episodes.forEach(async (smkEpisode) => {
+                        let plexEpkey = `${plxShow[0].ratingKey}-s${smkSeason.number}e${smkEpisode.number}`;
+                        if (plexEpkey in episodeSeasonS0mE0nLut) {
+                          await __API__.plex.apis.markEpisodeWatched({
+                            ...pconf,
+                            episodeKey:
+                              episodeSeasonS0mE0nLut[plexEpkey].ratingKey,
+                            name: `${smkShow.show.title} S${smkSeason.number}E${smkEpisode.number}`,
+                          });
+                        }
+                      });
+                    });
                   }
-                  if (simklShow.user_rating) {
+                  if (smkShow.user_rating) {
                     await __API__.plex.apis.rateMediaItem(
                       {
                         ...pconf,
-                        plexRatingKey: plexShow[0].ratingKey,
+                        plexRatingKey: plxShow[0].ratingKey,
                         info: {
-                          name: plexShow[0].title,
+                          name: plxShow[0].title,
                           type: "show",
                         },
                       },
-                      simklShow.user_rating
+                      smkShow.user_rating
                     );
                   }
                   break;
-                // The next 3 cases can't be handled by us
-                // Because in plex there is no concept of these
-                case "notinteresting":
-                  break;
-                case "hold":
-                  break;
-                case "plantowatch":
-                  break;
                 default:
                   break;
               }
             }
             break;
-          case MediaType.anime:
-            // TODO(#26): handle anime differently
-            // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
-            // as a reference
-            // let tvdbSlugsS = [];
-            for (let anime of simklChanges[mediaType]) {
-              if (!anime.show.ids) {
-                consoledebug("Show has no ids", anime)();
-                continue;
-              }
-              currentIdx++;
-              pMessage.value = totalSyncCount - currentIdx;
-              chrome.runtime.sendMessage(pMessage);
+          // case MediaType.anime:
+          //   // TODO(#26): handle anime differently
+          //   // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
+          //   // as a reference
+          //   // let tvdbSlugsS = [];
+          //   for (let anime of simklChanges[mediaType]) {
+          //     if (!anime.show.ids) {
+          //       consoledebug("Show has no ids", anime)();
+          //       continue;
+          //     }
+          //     currentIdx++;
+          //     pMessage.value = totalSyncCount - currentIdx;
+          //     chrome.runtime.sendMessage(pMessage);
 
-              let mPlexids = simklIdsToPlexIds(anime.show, mediaType);
-              let plexAnime = mPlexids
-                .map((id) => movieGuidLut[id])
-                .filter((m) => m);
-              if (plexAnime.length > 0) {
-                consoledebug("Anime was found in plex library", plexAnime)();
-              } else {
-                // consoledebug(
-                //   "Anime was not found in plex library",
-                //   anime.show.ids.slug
-                // )();
-                continue;
-              }
-              // let keys = Object.keys(anime.show.ids);
-              // if (keys.includes("tvdbslug") && !keys.includes("tvdb")) {
-              //   tvdbSlugsS.push(anime.show.ids);
-              // }
-              switch (anime.status) {
-                case "completed":
-                  // TODO: mark whole thing as watched
-                  break;
-                case "watching":
-                  // TODO: see what items are watched
-                  // and efficiently mark them as watched
-                  // i.e. if a whole season is done use season watched plex api method
-                  break;
-                // The next 3 cases can't be handled by us
-                // Because in plex there is no concept of these
-                case "notinteresting":
-                  break;
-                case "hold":
-                  break;
-                case "plantowatch":
-                  break;
-                default:
-                  break;
-              }
-            }
-            // consolelog(tvdbSlugsS)();
-            break;
+          //     let mPlexids = simklIdsToPlexIds(anime.show, mediaType);
+          //     let plexAnime = mPlexids
+          //       .map((id) => movieGuidLut[id])
+          //       .filter((m) => m);
+          //     if (plexAnime.length > 0) {
+          //       consoledebug("Anime was found in plex library", plexAnime)();
+          //     } else {
+          //       // consoledebug(
+          //       //   "Anime was not found in plex library",
+          //       //   anime.show.ids.slug
+          //       // )();
+          //       continue;
+          //     }
+          //     // let keys = Object.keys(anime.show.ids);
+          //     // if (keys.includes("tvdbslug") && !keys.includes("tvdb")) {
+          //     //   tvdbSlugsS.push(anime.show.ids);
+          //     // }
+          //     switch (anime.status) {
+          //       case "completed":
+          //         // TODO: mark whole thing as watched
+          //         break;
+          //       case "watching":
+          //         // TODO: see what items are watched
+          //         // and efficiently mark them as watched
+          //         // i.e. if a whole season is done use season watched plex api method
+          //         break;
+          //       // The next 3 cases can't be handled by us
+          //       // Because in plex there is no concept of these
+          //       case "notinteresting":
+          //         break;
+          //       case "hold":
+          //         break;
+          //       case "plantowatch":
+          //         break;
+          //       default:
+          //         break;
+          //     }
+          //   }
+          //   // consolelog(tvdbSlugsS)();
+          //   break;
           default:
             break;
         }
@@ -714,7 +756,7 @@ const syncDone = async (serverTime) => {
   });
   // comment this line to make `sync now` do fullsyncs everytime
   // useful for debugging, don't forget to uncomment this after done
-  // await chrome.storage.local.remove("doFullSync");
+  await chrome.storage.local.remove("doFullSync");
   let doneMsg = {
     type: ActionType.action,
     action: ActionType.ui.sync.finished,

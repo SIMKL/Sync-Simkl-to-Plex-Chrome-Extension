@@ -405,6 +405,16 @@ This document describes the development workflow that went into this project.
     - Refactor all functions so that
       - they feel systematic and clean
       - they allow proper modular unit testing
+    - [x] Make sure sync works in the background when no client views are active.
+      - Works, tested it by
+        - enabling dev log server
+        - reducing the sync interval to 0.1 mins, for debugging purposes.
+        - reload extension.
+        - Start sync
+        - closing all clients
+      - Using dev log server instead of using devtools on service worker, because when devtools is open service workers will never get killed by chrome.
+        - So to remove this conditional behavior, a dev log server is used to test it.
+    - [ ] Beta testing guide doc.
 
 #### Notes (`@phanirithvij`)
 
