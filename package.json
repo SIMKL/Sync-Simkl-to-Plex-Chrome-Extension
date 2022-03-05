@@ -1,0 +1,45 @@
+{
+  "name": "simkl2plex",
+  "version": "0.0.1",
+  "description": "Sync simkl watch history to plex",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build": "run-script-os",
+    "build:darwin:linux": "sh scripts/build.sh && npm run build:pack",
+    "build:win32": ".\\scripts\\build.ps1 && npm run build:pack",
+    "build:pack": "web-ext build -s dist -a artifacts/chrome -n '{name}-{version}-chrome.zip' --overwrite-dest",
+    "test": "exitzero npm run test:patchqunit && npm run test:puppeteer",
+    "test:puppeteer": "node src/tests/puppet.js",
+    "test:patchqunit": "patch -f node_modules/node-qunit-puppeteer/index.js src/tests/node-qunit.patch"
+  },
+  "webExt": {
+    "sourceDir": "src/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension.git"
+  },
+  "keywords": [
+    "simkl",
+    "plex",
+    "sync",
+    "anime",
+    "entertainment",
+    "watch history"
+  ],
+  "author": "Simkl",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension/issues"
+  },
+  "homepage": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension#readme",
+  "devDependencies": {
+    "exitzero": "^1.0.1",
+    "node-qunit-puppeteer": "2.1.0",
+    "puppeteer": "^13.4.1",
+    "run-script-os": "^1.1.6",
+    "web-ext": "^6.7.0"
+  }
+}

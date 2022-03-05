@@ -1,0 +1,38 @@
+body {
+	--text-desc: "To get started please connect Simkl, Plex and paste your Plex local server URL";
+	--text-desc-add-url: "Simkl and Plex are connected. Now please add your Plex server URL.";
+	--text-desc-can-start: "Click START SYNC to start syncing Simkl with Plex.";
+	--text-desc-connecting-to-simkl: "Loading your watchlists from Simkl API ...";
+	--text-desc-connecting-to-url: "Trying to connect to your Plex server URL ...";
+	--text-desc-syncing: 'Syncing ' var(--plex-items-count) ' items to Plex...';
+	--text-desc-waiting-for-next-sync: 'Next sync to Plex in ' var(--plex-timer);
+
+	--text-btn-connect-simkl: "Connect Simkl";
+	--text-btn-disconnect-simkl: "Disconnect Simkl";
+	--text-btn-connected-simkl: "Simkl connected";
+	--text-btn-connect-plex: "Connect Plex";
+	--text-btn-disconnect-plex: "Disconnect Plex";
+	--text-btn-connected-plex: "Plex connected";
+	--text-form-plex-url: "Local Plex server URL:";
+	--text-form-select-time: "How often would you like to sync?";
+	--text-form-button: "Start sync";
+	--plex-items-count: "";
+	--plex-timer: "--:--:--";
+	--text-plex-timer-sync-now: "Sync now";
+	--text-form-button-no-url: "ERROR: NO URL";
+	--text-form-button-no-simkl: "ERROR: NO SIMKL";
+	--text-form-button-no-plex: "ERROR: NO PLEX";
+	--text-form-button-disable: "Disable sync";
+	--text-footer-desc: "The extension will start syncing all watched items from your Simkl watch lists to Plex";
+	--text-footer-desc-enabled: "The extension is currently syncing new watched items from your Simkl watch lists";
+
+
+	--text-error-plex-url: "Please insert a correct Plex URL to your server. Example: http://yourplexserverip:32400";
+	--text-error-simkl-url-offline: "The extension was not able to connect to Simkl API.";
+	--text-error-plex-url-offline: "The extension was not able to connect to your plex server URL. Check your firewall.";
+	--text-error-plex-url-unexpected: "Got an unexpected response, plex url might be incorrect.";
+	--text-error-sync: "Error detected.";
+	--text-error-sync-simkl: "Your Simkl token is expired. Please re-connect.";
+	--text-error-sync-plex: "Your Plex token is expired. Please re-connect.";
+	--text-error-sync--simkl-plex: "Your Simkl and plex tokens have expired. Please re-connect.";
+}

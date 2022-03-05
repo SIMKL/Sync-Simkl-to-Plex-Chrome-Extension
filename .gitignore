@@ -1,0 +1,15 @@
+.env
+temp/
+node_modules/
+src/js/background/env.js
+# TODO(#1): remove this
+inspirobot.me/
+dist/
+artifacts/
+*.zip
+qunit-results.png
+*.pem
+*.crx
+
+# chrome generates this
+_metadata/

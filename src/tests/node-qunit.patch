@@ -1,0 +1,10 @@
+302c302
+< async function runQunitPuppeteer(qunitPuppeteerArgs) {
+---
+> async function runQunitPuppeteer(qunitPuppeteerArgs, headless = true) {
+304c304,306
+<   const args = { args: puppeteerArgs };
+---
+>   const args = { args: puppeteerArgs, headless };
+>   if (process.env.PUPPETEER_EXEC_PATH)
+>     args.executablePath = process.env.PUPPETEER_EXEC_PATH;
