@@ -594,30 +594,31 @@ const startBgSync = async (signal) => {
                     // detect if a season has been fully watched
                     // if so need to be careful with sending too many requests to plex
                     console.log(`Show ${plxShow[0].title}`);
-                    smkShow.seasons.forEach(async (smkSeason) => {
-                      console.log(`Season ${smkSeason.number}`);
-                      if ("total" in smkSeason) {
-                        if (smkSeason.total == smkSeason.episodes.length) {
-                          await __API__.plex.apis.markSeasonWatched({
-                            ...pconf,
-                            seasonKey: smkSeason.ratingKey,
-                            name: `${plxShow[0].title}: ${smkSeason.title}`,
-                          });
-                          return;
+                    if ("seasons" in smkShow)
+                      smkShow.seasons.forEach(async (smkSeason) => {
+                        console.log(`Season ${smkSeason.number}`);
+                        if ("total" in smkSeason) {
+                          if (smkSeason.total == smkSeason.episodes.length) {
+                            await __API__.plex.apis.markSeasonWatched({
+                              ...pconf,
+                              seasonKey: smkSeason.ratingKey,
+                              name: `${plxShow[0].title}: ${smkSeason.title}`,
+                            });
+                            return;
+                          }
                         }
-                      }
-                      smkSeason.episodes.forEach(async (smkEpisode) => {
-                        let plexEpkey = `${plxShow[0].ratingKey}-s${smkSeason.number}e${smkEpisode.number}`;
-                        if (plexEpkey in episodeSeasonS0mE0nLut) {
-                          await __API__.plex.apis.markEpisodeWatched({
-                            ...pconf,
-                            episodeKey:
-                              episodeSeasonS0mE0nLut[plexEpkey].ratingKey,
-                            name: `${smkShow.show.title} S${smkSeason.number}E${smkEpisode.number}`,
-                          });
-                        }
+                        smkSeason.episodes.forEach(async (smkEpisode) => {
+                          let plexEpkey = `${plxShow[0].ratingKey}-s${smkSeason.number}e${smkEpisode.number}`;
+                          if (plexEpkey in episodeSeasonS0mE0nLut) {
+                            await __API__.plex.apis.markEpisodeWatched({
+                              ...pconf,
+                              episodeKey:
+                                episodeSeasonS0mE0nLut[plexEpkey].ratingKey,
+                              name: `${smkShow.show.title} S${smkSeason.number}E${smkEpisode.number}`,
+                            });
+                          }
+                        });
                       });
-                    });
                   }
                   if (smkShow.user_rating) {
                     await __API__.plex.apis.rateMediaItem(
