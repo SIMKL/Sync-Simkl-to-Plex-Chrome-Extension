@@ -416,9 +416,9 @@ chrome.runtime.onMessage.addListener(async (message, sender) => {
           window.swPong = message;
           break;
         case ActionType.sw.tabFocus:
-          chrome.tabs.discard(
+          chrome.tabs.update(
             (await chrome.tabs.getCurrent()).id,
-            // { active: true },
+            { active: true },
             (_) => {}
           );
           break;
@@ -518,7 +518,10 @@ const pingServiceWorker = async () => {
   consoledebug("ping service worker")();
   // ping service worker every 2 minutes
   window.pingerHandle && clearInterval(pingerHandle);
-  window.pingerHandle = setInterval(pingServiceWorker, ServiceWorkerPingInterval);
+  window.pingerHandle = setInterval(
+    pingServiceWorker,
+    ServiceWorkerPingInterval
+  );
   let m = {
     type: CallType.call,
     method: CallType.bg.sw.ping,
