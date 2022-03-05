@@ -78,16 +78,16 @@ const handleHashRoutes = async () => {
     startPlexOauth();
   } else {
     // request service worker to validate and save plex oauth token
-    checkPlexAuthTokenValidity();
-    pingServiceWorker();
+    await pingServiceWorker();
+    await checkPlexAuthTokenValidity();
   }
   if (loginType == "simkl") {
     startSimklOauth();
   } else {
     // request service worker to validate and save simkl oauth token
     // checkSimklAuthTokenValidity();
-    checkSimklAuthTokenValidity();
-    pingServiceWorker();
+    await checkSimklAuthTokenValidity();
+    await pingServiceWorker();
   }
 };
 
@@ -287,7 +287,7 @@ const onLoad = async () => {
       startNextSyncTimer();
     }
     // service worker healthCheck
-    pingServiceWorker();
+    await pingServiceWorker();
   })();
 
   uiSetPopupViewState();
@@ -299,14 +299,8 @@ window.addEventListener("resize", uiHandleBackgroundImg);
 
 // Registering UI event handlers (actions)
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!("HandledMessagePorts" in window)) window.HandledMessagePorts = {};
-  let msgIdx = Object.keys(window.HandledMessagePorts).length;
-  window.HandledMessagePorts[msgIdx] = {
-    message,
-    sender,
-  };
-  // consoledebug("[popup] got message:", message, "from:", sender)();
+chrome.runtime.onMessage.addListener(async (message, sender) => {
+  // consoledebug("Got message:", message, "from:", sender)();
   switch (message.type) {
     case ActionType.action:
       switch (message.action) {
@@ -404,8 +398,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case ActionType.ui.sync.progress:
           // handle earch progress item
           if (message.value <= 0) {
-            // don't return here, an sendResponse needs to be called
-            break;
+            return;
           }
           document.body.classList.add("sync-in-progress-plex");
           document.body.classList.remove("sync-waiting-for-next-sync");
@@ -423,13 +416,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           window.swPong = message;
           break;
         case ActionType.sw.tabFocus:
-          (async () => {
-            chrome.tabs.update(
-              (await chrome.tabs.getCurrent()).id,
-              { active: true },
-              (_) => {}
-            );
-          })();
+          chrome.tabs.update(
+            (await chrome.tabs.getCurrent()).id,
+            { active: true },
+            (_) => {}
+          );
           break;
         default:
           consoledebug("Unknown action", message)();
@@ -442,17 +433,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     default:
       consoledebug("Unknown message type", message)();
   }
-  // consoledebug(
-  //   "[popup] Sending null response back",
-  //   message.type,
-  //   message.method,
-  //   message.action
-  // )();
-  sendResponse();
-  window.HandledMessagePorts[msgIdx] = {
-    ...window.HandledMessagePorts[msgIdx],
-    sendResponse: true,
-  };
+  // required if we don't use sendResponse
+  return true;
 });
 
 // TODOO: move this logic to service worker
@@ -472,7 +454,7 @@ const retrySyncWithBackoff = async (
     chrome.storage.local.set({
       failedTries: 0,
     });
-    return;
+    return true;
   }
   let backOffmult = Math.min(Math.pow(2, failedTries), 30);
   restartLibrarySync(
@@ -532,7 +514,7 @@ const startNextSyncTimer = async () => {
   }
 };
 
-const pingServiceWorker = () => {
+const pingServiceWorker = async () => {
   consoledebug("ping service worker")();
   // ping service worker every 2 minutes
   window.pingerHandle && clearInterval(pingerHandle);
@@ -544,7 +526,7 @@ const pingServiceWorker = () => {
     type: CallType.call,
     method: CallType.bg.sw.ping,
   };
-  chrome.runtime.sendMessage(m);
+  await chrome.runtime.sendMessage(m);
   window.pingerTimeout && clearTimeout(window.pingerTimeout);
   window.pingerTimeout = setTimeout(() => {
     if (window.swPong) {

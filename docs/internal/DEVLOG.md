@@ -380,12 +380,9 @@ This document describes the development workflow that went into this project.
     - And it runs perfectly fine with no errors on the previous stable chrome version `98.0.4758.102`.
     - maybe related https://crbug.com/1296492
     - [update channel](https://chromereleases.googleblog.com/2022/03/stable-channel-update-for-desktop.html)
-    - [x] Fixed this
+    - [ ] Fix this
       - Might require massive restructuring and removing the uses of `chrome.runtime.sendMessage`, maybe use `chrome.tabs.sendMessage`idk.
-        - Nope, it was trivial
       - If using `chrome.tabs.sendMessage` instead of `chrome.runtime.sendMessage` and also manifest v2 thus background page instead of service workers, we won't be affected.
-      - Solution was to use `sendResponse` everytime and never miss sending a response back, even if it is empty.
-        - In case of async methods, `sendResponse` need not be used and `return true` still keeps the port open.
 
   - Found another bug with chrome service workers (how surprising)
     - `webRequest.onBeforeRequest` won't trigger when service worker is inactive.

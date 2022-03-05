@@ -74,12 +74,6 @@ importScripts("./api/simkl.js");
 importScripts("../common.js");
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!("HandledMessagePorts" in self)) self.HandledMessagePorts = {};
-  let msgIdx = Object.keys(self.HandledMessagePorts).length;
-  self.HandledMessagePorts[msgIdx] = {
-    message,
-    sender,
-  };
   // consoledebug("[SW] Got message:", message, "from:", sender)();
   switch (message.type) {
     case CallType.call:
@@ -92,13 +86,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case CallType.oauth.plex.checkTokenValiditiy:
           // consoledebug("[SW] Got message for token validation:", message)();
           __API__.plex.oauth.checkTokenValiditiy(null, message.token);
-          break;
+          return true;
         case CallType.oauth.simkl.oauthStart:
           __API__.simkl.oauth.oauthStart(sendResponse, message.inPopup);
+          // https://stackoverflow.com/a/57608759
           return true;
         case CallType.oauth.simkl.checkTokenValiditiy:
           __API__.simkl.oauth.checkTokenValiditiy(null, message.token);
-          break;
+          return true;
+
         // bg handlers
         case CallType.bg.popupAfterPermissionPrompt:
           chrome.tabs.create({
@@ -106,14 +102,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               `popup.html?url=${message.plexUrl}#${message.hashRoute}`
             ),
           });
-          break;
+          return true;
         case CallType.bg.sync.start:
           self.aController = new AbortController();
           startBgSync(aController.signal);
-          break;
+          return true;
         case CallType.bg.sync.stop:
           !!self.aController && self.aController.abort();
-          break;
+          return true;
         case CallType.bg.sw.ping:
           let r = {
             action: ActionType.sw.pong,
@@ -121,7 +117,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           };
           chrome.runtime.sendMessage(r);
           sendResponse(r);
-          return;
+          return true;
 
         // API methods
         case CallType.apis.plex.getBgUrl:
@@ -140,17 +136,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       consoledebug("Unknown message type", message.type)();
       break;
   }
-  // consoledebug(
-  //   "[SW] Sending null response back",
-  //   message.type,
-  //   message.method,
-  //   message.action
-  // )();
-  sendResponse();
-  self.HandledMessagePorts[msgIdx] = {
-    ...self.HandledMessagePorts[msgIdx],
-    sendResponse: true,
-  };
+  return true;
 });
 
 // Periodic background sync
