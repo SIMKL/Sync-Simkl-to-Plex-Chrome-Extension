@@ -68,7 +68,7 @@ This document describes the development workflow that went into this project.
         - For this the logic coded was save `pincode,pinid` to localstorage after the intial request and before the redirect if the url hash is `plex-oauth` then load `pincode,pinid` from localstorage and get the `authToken` and remove them from localstorage and remove the url hash, i.e., `popup.html`
         - TODO(#2): Also may need to add expire time to localstorage to invalidate expired `pincode,pinid` from localstorage.
     - Got the html UI from Andrew and connected the plex oaut flow to the `connect plex` button, via the css classlist toggle logic as suggested by Andrew.
-    - Sent PR [#1](https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension/pull/1)
+    - Sent PR [#1](https://github.com/SIMKL/Sync-Simkl-to-Plex-Chrome-Extension/pull/1)
 
 - `@masyk`
   - Started working on the html/css for chrome extension.
@@ -307,17 +307,17 @@ This document describes the development workflow that went into this project.
           url = https://github.com/phanirithvij/sample_snitch_testbed.git
           fetch = +refs/heads/*:refs/remotes/bugs/*
         [remote "origin"]
-          url = https://github.com/phanirithvij/Sync-Simkl-to-Plex-Chome-Extension.git
+          url = https://github.com/phanirithvij/Sync-Simkl-to-Plex-Chrome-Extension.git
           fetch = +refs/heads/*:refs/remotes/origin/*
         [remote "upstream"]
-          url = https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension.git
+          url = https://github.com/SIMKL/Sync-Simkl-to-Plex-Chrome-Extension.git
           fetch = +refs/heads/*:refs/remotes/upstream/*
         ```
 
 #### `2/3/2/2022`
 
 - `@phanirithvij`
-  - There is a `"homepage_url": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chome-Extension"` field in the manifest which shows up as the extension icon right click first item.
+  - There is a `"homepage_url": "https://github.com/SIMKL/Sync-Simkl-to-Plex-Chrome-Extension"` field in the manifest which shows up as the extension icon right click first item.
   - Added context menu options for opening in a new tab and focusing on an active tab
   - package.json use `run-script-os` https://stackoverflow.com/a/53197655.
   - TODO(#6): move away from go, and use node.js scripts for everything instead. I used go initially intending the scripts written to be temporary but they are kind of required now.

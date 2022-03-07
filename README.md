@@ -1,4 +1,4 @@
-### Sync-Simkl-to-Plex-Chome-Extension
+### Sync-Simkl-to-Plex-Chrome-Extension
 
 Currently under development
 
