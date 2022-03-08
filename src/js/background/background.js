@@ -52,6 +52,7 @@ let __API__ = {
       getLastActivity: f,
       getAllItems: f,
       getUserInfo: f,
+      getServerTime: f,
       getShowEpisodeList: f,
     },
   },

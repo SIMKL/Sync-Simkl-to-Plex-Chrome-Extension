@@ -437,6 +437,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           setCssVar("--plex-items-count", `"${message.value}"`);
           break;
         case ActionType.ui.sync.finished:
+          consoledebug("Sync finished")();
           // sync finished
           setCssVar("--plex-items-count", 0);
           document.body.classList.remove("sync-in-progress-plex");
@@ -514,12 +515,6 @@ const retrySyncWithBackoff = async (
 };
 
 const startNextSyncTimer = async () => {
-  // FIXME: there is a bug with this as well
-  // the timer and sync now buttons disappear sometimes
-  // will reapper when the page is reloaded but
-  // it occurs randomly
-  // use `sync now` button multiple times to reproduce it
-  // then debug it.
   let signal = null;
   if (!!window.timerAbortC) {
     // TODO(#35): to comibne multiple signals
@@ -539,7 +534,17 @@ const startNextSyncTimer = async () => {
     (await chrome.alarms.get(AlarmKey)).scheduledTime
   );
   let remainingMS = () => scheduledSyncTime.getTime() - now().getTime();
-  // TODO(#36): determine if sync is ongoing and don't show this
+  if (lastSyncedTime > now()) {
+    // if somehow we synced in the future (because client's clock is wrong)
+    // set the last synced time to now
+    lastSyncedTime = now();
+    await chrome.storage.local.set({
+      lastSynced: lastSyncedTime.toISOString(),
+      lastSyncedSource: "client",
+    });
+  }
+  consoledebug("Timer times", now(), lastSyncedTime, scheduledSyncTime)();
+  consoledebug("Timer conditions", now() > lastSyncedTime, now() < scheduledSyncTime)();
   if (now() > lastSyncedTime && now() < scheduledSyncTime) {
     document.body.classList.add("sync-waiting-for-next-sync");
     let totSecs = parseInt(syncPeriod) * 60 * 60;

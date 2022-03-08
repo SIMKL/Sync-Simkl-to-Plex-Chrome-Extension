@@ -169,7 +169,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       await Promise.all(
         responses.map(async (resp, i) => {
           if (!serverTime) {
-            serverTime = await _determineServerTime(resp);
+            serverTime = await getServerTime(resp);
           }
           if (resp.status == 200) {
             let items = await resp.json();
@@ -183,7 +183,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
         })
       );
       if (!serverTime) {
-        serverTime = await _determineServerTime(null);
+        serverTime = await getServerTime(null);
       }
       if (!!responseChannel) {
         // TODO: remove this, responseChannel is unused
@@ -199,43 +199,10 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     } catch (error) {
       broadcastOnlineStatus(false);
       if (!serverTime) {
-        serverTime = await _determineServerTime(null);
+        serverTime = await getServerTime(null);
       }
       return { success: false, error: error, serverTime };
     }
-  };
-
-  const _determineServerTime = async (simklResp) => {
-    let st = null;
-    // get it from simkl date header
-    if (simklResp && simklResp.headers.has("date")) {
-      st = new Date(simklResp.headers.get("date")).toISOString();
-      consoledebug("saving simkl api's response server time")();
-      return st;
-    }
-    // fallback to simkl's date header
-    try {
-      // here don't send a request to a valid url
-      // https://api.simkl.com redirects to apiary
-      let simkltime = await fetch("https://api.simkl.com/invalid_url_route", {
-        method: "HEAD",
-      }).catch((err) => {
-        throw err;
-      });
-      if (simkltime.headers.has("date")) {
-        st = new Date(simkltime.headers.get("date")).toISOString();
-        consoledebug("requesting simkl api's server time")();
-        return st;
-      }
-    } catch (err) {
-      // Can try plex.tv server's date
-      consoleerror(err)();
-    }
-    // worst case scenario: use client's clock time
-    let now = new Date().toISOString();
-    st = now;
-    console.debug("Fallback to client's clock time", st, err);
-    return st;
   };
 
   const getLastActivity = async (token, responseChannel = null) => {
