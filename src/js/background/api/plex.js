@@ -219,7 +219,10 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
 
   const oauthStart = async (responseChannel, inPopup) => {
     let resp = { code: null, id: null };
-    let { plexPinCode, plexPinID } = await chrome.storage.local.get();
+    let { plexPinCode, plexPinID } = await chrome.storage.local.get({
+      plexPinCode: null,
+      plexPinID: null,
+    });
     consoledebug("localStorage:", { plexPinCode, plexPinID })();
     if (!!plexPinCode && !!plexPinID) {
       // oauth second step (after redirect)

@@ -5,7 +5,7 @@
         "action": {
             "type": "redirect",
             "redirect": {
-                "extensionPath": "/popup.html#declerative-redirect"
+                "extensionPath": "/popup.html#declarative-redirect"
             }
         },
         "condition": {

@@ -119,7 +119,7 @@ const ActionType = {
   action: "",
   oauth: {
     plex: { login: "", logout: "", loginCheck: "" },
-    simkl: { login: "", logout: "", loginCheck: "" },
+    simkl: { login: "", logout: "", loginCheck: "", redirect: "" },
   },
   ui: {
     sync: {

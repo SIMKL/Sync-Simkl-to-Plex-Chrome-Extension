@@ -39,7 +39,7 @@ const inPopup = () => {
   // know if the current view is a popup or a full tab
   // https://stackoverflow.com/a/8921196
   let win = chrome.extension.getViews({
-    type: chrome.tabs.WindowType.POPUP, // popup
+    type: chrome.tabs?.WindowType.POPUP || "popup", // popup
   })[0];
   return win !== undefined && win == window;
 };
@@ -194,6 +194,19 @@ const setBrowserInfo = () => {
       )();
     }
   );
+};
+
+// https://stackoverflow.com/a/12606298
+const isMobile = {
+  Windows: () => /IEMobile/i.test(navigator.userAgent),
+  Android: () => /Android/i.test(navigator.userAgent),
+  BlackBerry: () => /BlackBerry/i.test(navigator.userAgent),
+  iOS: () => /iPhone|iPad|iPod/i.test(navigator.userAgent),
+  any: () =>
+    isMobile.Windows() ||
+    isMobile.BlackBerry() ||
+    isMobile.Android() ||
+    isMobile.iOS(),
 };
 
 // https://stackoverflow.com/a/69590637

@@ -67,6 +67,8 @@ const validateInputUrl = (inputUrl) => {
 const handleHashRoutes = async () => {
   let windowHash = window.location.hash;
   if (windowHash == "") windowHash = "#"; // so that next line will result in ""
+  consoledebug("Handling the url hashrouter logic", windowHash)();
+  consoledebug("TabID for this url", (await chrome.tabs.getCurrent())?.id)();
   // remove #plex-oauth or #simkl-oauth from url to be safe
   if (windowHash.startsWith("#plex-") || windowHash.startsWith("#simkl-"))
     removeWindowHash();
@@ -75,6 +77,7 @@ const handleHashRoutes = async () => {
   // if hash is #plex-oauth or #simkl-oauth
   if (loginType == "plex") {
     // this won't request new pin and code this time
+    consoledebug("starting plex oauth second step")();
     startPlexOauth();
   } else {
     // request service worker to validate and save plex oauth token
@@ -82,6 +85,7 @@ const handleHashRoutes = async () => {
     pingServiceWorker();
   }
   if (loginType == "simkl") {
+    consoledebug("starting simkl oauth second step")();
     startSimklOauth();
   } else {
     // request service worker to validate and save simkl oauth token
@@ -355,6 +359,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           stopLibrarySync();
           finishLogoutSimkl(message);
           break;
+        case ActionType.oauth.simkl.redirect:
+          let { url, tabId } = message;
+          let parts = url.split("?");
+          let simklPinCode = parts[parts.length - 1].split("=")[1];
+          consoledebug(`Got pincode for simkl: ${simklPinCode}`)();
+          (async (pincode) => {
+            await chrome.storage.local.set({
+              simklPinCode: pincode,
+            });
+            let { simklPinCode } = await chrome.storage.local.get({
+              simklPinCode: null,
+            });
+            consoledebug(`Saved simkl pincode: ${simklPinCode}`)();
+            handleHashRoutes();
+            // consoledebug("Reloading tab with tabid", tabId)();
+            // console.log(chrome.tabs?.reload);
+            // await chrome.tabs.reload(tabId);
+            // consoledebug("Done reloading tab with tabid", tabId)();
+          })(simklPinCode);
+          break;
         case ActionType.ui.sync.enabled:
           uiSyncEnabled();
           break;
@@ -425,7 +449,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case ActionType.sw.tabFocus:
           (async () => {
             chrome.tabs.update(
-              (await chrome.tabs.getCurrent()).id,
+              (await chrome.tabs.getCurrent())?.id,
               { active: true },
               (_) => {}
             );

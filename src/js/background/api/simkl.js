@@ -3,6 +3,17 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 (() => {
   importScripts("./env.js");
 
+  const broadcastOnlineStatus = (online = true) => {
+    // inform clients simkl couldn't be reached
+    let message = {
+      action: online
+        ? ActionType.ui.sync.simkl.online
+        : ActionType.ui.sync.simkl.offline,
+      type: ActionType.action,
+    };
+    chrome.runtime.sendMessage(message);
+  };
+
   const checkTokenValiditiy = async (responseChannel, token) => {
     responseChannel =
       responseChannel ||
@@ -37,24 +48,30 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   const getAuthToken = async (code) => {
-    let req = {
-      code: code,
-      client_id: SimklClientID,
-      client_secret: SimklClientSecret,
-      redirect_uri: SimklRedirectURI,
-      grant_type: "authorization_code",
-    };
-    // TODO(#15): API error handling
-    return await (
-      await fetch("https://api.simkl.com/oauth/token", {
+    try {
+      let req = {
+        code: code,
+        client_id: SimklClientID,
+        client_secret: SimklClientSecret,
+        redirect_uri: SimklRedirectURI,
+        grant_type: "authorization_code",
+      };
+      let resp = await fetch("https://api.simkl.com/oauth/token", {
         method: "POST",
         headers: {
           accept: "application/json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify(req),
-      })
-    ).json();
+      });
+      broadcastOnlineStatus();
+      if (resp.status === 200) {
+        return await resp.json();
+      }
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      return { error: "offline" };
+    }
   };
 
   const loginURI = () => {
@@ -70,7 +87,9 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   const oauthStart = async (responseChannel, inPopup) => {
-    let { simklPinCode } = await chrome.storage.local.get();
+    let { simklPinCode } = await chrome.storage.local.get({
+      simklPinCode: null,
+    });
     consoledebug("localStorage:", { simklPinCode })();
 
     if (!!simklPinCode) {
@@ -145,6 +164,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
           })
         )
       );
+      broadcastOnlineStatus();
       let data = {};
       await Promise.all(
         responses.map(async (resp, i) => {
@@ -177,6 +197,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
         serverTime,
       };
     } catch (error) {
+      broadcastOnlineStatus(false);
       if (!serverTime) {
         serverTime = await _determineServerTime(null);
       }
@@ -208,6 +229,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       }
     } catch (err) {
       // Can try plex.tv server's date
+      consoleerror(err)();
     }
     // worst case scenario: use client's clock time
     let now = new Date().toISOString();
@@ -217,48 +239,64 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   const getLastActivity = async (token, responseChannel = null) => {
-    // TODO(#17): API error handling
-    let resp = await fetch("https://api.simkl.com/sync/activities", {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        "simkl-api-key": SimklClientID,
-      },
-    });
-    if (resp.status == 200) {
+    try {
+      let resp = await fetch("https://api.simkl.com/sync/activities", {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "simkl-api-key": SimklClientID,
+        },
+      });
+      broadcastOnlineStatus();
+      if (resp.status == 200) {
+        let data = await resp.json();
+        !!responseChannel && responseChannel(makeSuccessResponse(data));
+        return { valid: true, info: data };
+      }
       let data = await resp.json();
-      !!responseChannel && responseChannel(makeSuccessResponse(data));
-      return { valid: true, info: data };
+      !!responseChannel && responseChannel(makeErrorResponse(data));
+      return { valid: false, info: data, status: resp.status };
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      return { valid: false, info: data, status: resp.status };
     }
-    let data = await resp.json();
-    !!responseChannel && responseChannel(makeErrorResponse(data));
-    return { valid: false, info: data, status: resp.status };
   };
 
   const getUserInfo = async (token) => {
-    // TODO(#18): API error handling
-    let resp = await fetch("https://api.simkl.com/users/settings", {
-      headers: {
-        "Content-Type": "application/json",
-        "simkl-api-key": SimklClientID,
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (resp.status == 200) {
-      return await resp.json();
+    try {
+      let resp = await fetch("https://api.simkl.com/users/settings", {
+        headers: {
+          "Content-Type": "application/json",
+          "simkl-api-key": SimklClientID,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      broadcastOnlineStatus();
+      if (resp.status == 200) {
+        return await resp.json();
+      }
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      return null;
     }
   };
 
   const getShowEpisodeList = async (token, showID) => {
-    let resp = await fetch(`https://api.simkl.com/tv/episodes/${showID}`, {
-      headers: {
-        "Content-Type": "application/json",
-        "simkl-api-key": SimklClientID,
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (resp.status == 200) {
-      return await resp.json();
+    try {
+      let resp = await fetch(`https://api.simkl.com/tv/episodes/${showID}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "simkl-api-key": SimklClientID,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      broadcastOnlineStatus();
+      if (resp.status == 200) {
+        return await resp.json();
+      }
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      return null;
     }
   };
 
