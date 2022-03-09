@@ -753,7 +753,8 @@ const syncDone = (serverTime) => {
   // sync done
   consoledebug("Saving server time", serverTime);
   chrome.storage.local.set({
-    lastSynced: serverTime,
+    lastSynced: serverTime.st,
+    lastSyncedSource: serverTime.source,
     // can set this to true to always do a full sync
     // when using the sync now button
     doFullSync: false,

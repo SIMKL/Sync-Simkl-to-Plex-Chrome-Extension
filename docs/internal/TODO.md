@@ -34,4 +34,3 @@
 - [ ] (maybe needed) Php code for proxying plex oauth requests
   - This would get rid of the warning message shown by plex's oauth screen.
 - [ ] Extension icon, name, description
-

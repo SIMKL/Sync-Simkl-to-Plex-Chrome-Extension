@@ -16,5 +16,8 @@ for testing the first beta version.
 #### Testers
 
 - @alexthemaster
-- RedBoyke (discord)
-- sloke123 (discord)
+- RedBoyke (d)
+- sloke123 (d)
+- JacobMIX (d)
+
+> d = discord

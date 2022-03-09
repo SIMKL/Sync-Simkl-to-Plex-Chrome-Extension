@@ -25,6 +25,42 @@ const stringify = (json) => {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const getServerTime = async (simklResp) => {
+  let st = null;
+  // get it from simkl date header
+  if (simklResp && simklResp.headers.has("date")) {
+    st = new Date(simklResp.headers.get("date")).toISOString();
+    consoledebug("saving simkl api's response server time")();
+    return { st, source: "simkl" };
+  }
+  let error;
+  // fallback to simkl's date header
+  try {
+    // https://api.simkl.com redirects to apiary
+    // use a valid sub route instead
+    let simkltime = await fetch("https://api.simkl.com/search/random", {
+      method: "HEAD",
+    }).catch((err) => {
+      error = err;
+      throw err;
+    });
+    if (simkltime.headers.has("date")) {
+      st = new Date(simkltime.headers.get("date")).toISOString();
+      consoledebug("requesting simkl api's server time")();
+      return { st, source: "simkl" };
+    }
+  } catch (err) {
+    // Can try plex.tv server's date
+    // consoleerror(err)();
+    error = err;
+  }
+  // worst case scenario: use client's clock time
+  let now = new Date().toISOString();
+  st = now;
+  consoledebug("Fallback to client's clock time", st, error)();
+  return { st, source: "client" };
+};
+
 // Enums
 
 (() => {
@@ -119,7 +155,7 @@ const ActionType = {
   action: "",
   oauth: {
     plex: { login: "", logout: "", loginCheck: "" },
-    simkl: { login: "", logout: "", loginCheck: "" },
+    simkl: { login: "", logout: "", loginCheck: "", redirect: "" },
   },
   ui: {
     sync: {

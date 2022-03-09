@@ -57,7 +57,7 @@ const finishPlexOauth = (message) => {
     setUIPlexConnected();
     savePlexAuthToken(message.authToken);
     // remove pincode and pinid
-    chrome.storage.local.set({ pincode: null, pinid: null });
+    chrome.storage.local.remove(["plexPinCode", "plexPinID"]);
     return true;
   }
   // TODO(#30): show errors

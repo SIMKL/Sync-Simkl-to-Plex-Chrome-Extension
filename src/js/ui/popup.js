@@ -67,6 +67,8 @@ const validateInputUrl = (inputUrl) => {
 const handleHashRoutes = async () => {
   let windowHash = window.location.hash;
   if (windowHash == "") windowHash = "#"; // so that next line will result in ""
+  consoledebug("Handling the url hashrouter logic", windowHash)();
+  consoledebug("TabID for this url", (await chrome.tabs.getCurrent())?.id)();
   // remove #plex-oauth or #simkl-oauth from url to be safe
   if (windowHash.startsWith("#plex-") || windowHash.startsWith("#simkl-"))
     removeWindowHash();
@@ -75,6 +77,7 @@ const handleHashRoutes = async () => {
   // if hash is #plex-oauth or #simkl-oauth
   if (loginType == "plex") {
     // this won't request new pin and code this time
+    consoledebug("starting plex oauth second step")();
     startPlexOauth();
   } else {
     // request service worker to validate and save plex oauth token
@@ -82,6 +85,7 @@ const handleHashRoutes = async () => {
     pingServiceWorker();
   }
   if (loginType == "simkl") {
+    consoledebug("starting simkl oauth second step")();
     startSimklOauth();
   } else {
     // request service worker to validate and save simkl oauth token
@@ -355,6 +359,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           stopLibrarySync();
           finishLogoutSimkl(message);
           break;
+        case ActionType.oauth.simkl.redirect:
+          let { url, tabId } = message;
+          let parts = url.split("?");
+          let simklPinCode = parts[parts.length - 1].split("=")[1];
+          consoledebug(`Got pincode for simkl: ${simklPinCode}`)();
+          (async (pincode) => {
+            await chrome.storage.local.set({
+              simklPinCode: pincode,
+            });
+            let { simklPinCode } = await chrome.storage.local.get({
+              simklPinCode: null,
+            });
+            consoledebug(`Saved simkl pincode: ${simklPinCode}`)();
+            handleHashRoutes();
+            // consoledebug("Reloading tab with tabid", tabId)();
+            // console.log(chrome.tabs?.reload);
+            // await chrome.tabs.reload(tabId);
+            // consoledebug("Done reloading tab with tabid", tabId)();
+          })(simklPinCode);
+          break;
         case ActionType.ui.sync.enabled:
           uiSyncEnabled();
           break;
@@ -413,6 +437,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           setCssVar("--plex-items-count", `"${message.value}"`);
           break;
         case ActionType.ui.sync.finished:
+          consoledebug("Sync finished")();
           // sync finished
           setCssVar("--plex-items-count", 0);
           document.body.classList.remove("sync-in-progress-plex");
@@ -425,7 +450,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case ActionType.sw.tabFocus:
           (async () => {
             chrome.tabs.update(
-              (await chrome.tabs.getCurrent()).id,
+              (await chrome.tabs.getCurrent())?.id,
               { active: true },
               (_) => {}
             );
@@ -490,12 +515,6 @@ const retrySyncWithBackoff = async (
 };
 
 const startNextSyncTimer = async () => {
-  // FIXME: there is a bug with this as well
-  // the timer and sync now buttons disappear sometimes
-  // will reapper when the page is reloaded but
-  // it occurs randomly
-  // use `sync now` button multiple times to reproduce it
-  // then debug it.
   let signal = null;
   if (!!window.timerAbortC) {
     // TODO(#35): to comibne multiple signals
@@ -515,7 +534,17 @@ const startNextSyncTimer = async () => {
     (await chrome.alarms.get(AlarmKey)).scheduledTime
   );
   let remainingMS = () => scheduledSyncTime.getTime() - now().getTime();
-  // TODO(#36): determine if sync is ongoing and don't show this
+  if (lastSyncedTime > now()) {
+    // if somehow we synced in the future (because client's clock is wrong)
+    // set the last synced time to now
+    lastSyncedTime = now();
+    await chrome.storage.local.set({
+      lastSynced: lastSyncedTime.toISOString(),
+      lastSyncedSource: "client",
+    });
+  }
+  consoledebug("Timer times", now(), lastSyncedTime, scheduledSyncTime)();
+  consoledebug("Timer conditions", now() > lastSyncedTime, now() < scheduledSyncTime)();
   if (now() > lastSyncedTime && now() < scheduledSyncTime) {
     document.body.classList.add("sync-waiting-for-next-sync");
     let totSecs = parseInt(syncPeriod) * 60 * 60;
