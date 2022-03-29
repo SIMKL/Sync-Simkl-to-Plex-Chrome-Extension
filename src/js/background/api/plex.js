@@ -33,7 +33,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   };
 
   const throwError = (err) => {
-    consoleerror(err)();
+    // consoleerror(err)();
     throw err;
   };
 
@@ -77,7 +77,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     try {
       const ac = new AbortController();
       // 5 second timeout:
-      const timeoutId = setTimeout(() => ac.abort(), 5000);
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       // consoledebug("SW: fetch user info from plex.tv")();
       let resp = await fetch(
         "https://plex.tv/api/v2/user?" +
@@ -147,12 +147,16 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       code: pincode,
     });
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(`https://plex.tv/api/v2/pins/${pinID}?${qry}`, {
         method: "GET",
+        signal: ac.signal,
         headers: {
           accept: "application/json",
         },
       }).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       let data = await resp.json();
       return data;
@@ -167,18 +171,22 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   // on simkl.com php backend
   const plexRequestPIN = async () => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       const resp = await fetch(
         "https://plex.tv/api/v2/pins?" +
           stringifyPlex({
             strong: "true",
           }),
         {
+          signal: ac.signal,
           method: "POST",
           headers: {
             Accept: "application/json",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       let data = await resp.json();
       if (resp.status >= 300) {
@@ -281,18 +289,22 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
 
   const getLocalServers = async ({ plexToken, plexApiBaseURL }) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${plexApiBaseURL}servers?` +
           stringify({
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           method: "GET",
           headers: {
             Accept: "application/json",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       try {
         let data = await resp.json();
@@ -317,18 +329,22 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     fullResponse = false
   ) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${plexApiBaseURL}library/sections?` +
           stringifyPlex({
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           method: "GET",
           headers: {
             Accept: "application/json",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       if (resp.status == 200) {
         try {
@@ -371,6 +387,8 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       episode: 4,
     };
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${plexApiBaseURL}library/sections/${libraryKey}/all?` +
           stringifyPlex({
@@ -386,11 +404,13 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           headers: {
             accept: "application/json",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       if (resp.status == 200) {
         try {
@@ -418,17 +438,21 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
 
   const getUserDevices = async (plexToken) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         "https://plex.tv/devices.xml?" +
           stringify({
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           headers: {
             Accept: "application/xml",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       // TODO(#13): here plex.tv is offline not local plex instance
       // make it clear in the ui?
       broadcastOnlineStatus();
@@ -447,17 +471,21 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
 
   const getUserProfiles = async (plexToken) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         "https://plex.tv/api/home/users?" +
           stringifyPlex({
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           headers: {
             accept: "application/xml",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       if (resp.status == 200) {
         let xml = await resp.text();
@@ -472,18 +500,22 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
 
   const getUserProfileInfo = async (plexToken) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         "https://plex.tv/api/users?" +
           stringifyPlex({
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           headers: {
             accept: "application/json",
           },
           method: "GET",
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       if (resp.status == 200) {
         let xml = await resp.text();
@@ -589,6 +621,8 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     );
     return;
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${plexApiBaseURL}:/${markUnwatched ? "un" : ""}scrobble?` +
           stringifyPlex({
@@ -597,11 +631,13 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           headers: {
             accept: "application/json, text/plain, */*",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       if (resp.status == 200) {
         consoledebug(await resp.text())();
@@ -621,6 +657,8 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     console.log(`|__ Rating ${info.type} ${info.name}: as ${rating}/10`);
     return;
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${plexApiBaseURL}:/rate?` +
           stringifyPlex({
@@ -629,6 +667,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
             rating: rating,
           }),
         {
+          signal: ac.signal,
           headers: {
             accept: "application/json, text/plain, */*",
             "x-plex-text-format": "plain",
@@ -637,6 +676,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           method: "PUT",
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       if (resp.status == 200) {
         return { error: null };
@@ -659,6 +699,8 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     year = ""
   ) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${plexApiBaseURL}library/metadata/${plexRatingKey}/matches?` +
           stringifyPlex({
@@ -671,6 +713,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
             "X-Plex-Language": "en",
           }),
         {
+          signal: ac.signal,
           headers: {
             accept: "application/json",
           },
@@ -678,6 +721,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           method: "GET",
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       if (resp.status == 200) {
         let data = await resp.json();
@@ -726,17 +770,21 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
 
   const getArtWorks = async ({ plexToken, plexApiBaseURL, plexRatingKey }) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${plexApiBaseURL}library/metadata/${plexRatingKey}/arts?` +
           stringifyPlex({
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           headers: {
             Accept: "application/json",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       if (resp.status == 200) {
         let data = await resp.json();
         return data.MediaContainer.Metadata[0].key;
@@ -751,17 +799,21 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
 
   const getPosters = async ({ plexToken, plexApiBaseURL, plexRatingKey }) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${plexApiBaseURL}library/metadata/${plexRatingKey}/posters?` +
           stringifyPlex({
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           headers: {
             Accept: "application/json",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       if (resp.status == 200) {
         let data = await resp.json();
         return data.MediaContainer.Metadata[0].key;
@@ -774,42 +826,13 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     }
   };
 
-  /* These api calls might not be useful at the end */
-
-  const createSection = async ({ plexToken, plexApiBaseURL }) => {
-    fetch(
-      `${plexApiBaseURL}library/sections?` +
-        stringifyPlex({
-          name: "Simkl-Movies",
-          type: "movie",
-          agent: "tv.plex.agents.movie",
-          scanner: "Plex Movie",
-          language: "en-US",
-          importFromiTunes: "",
-          enableAutoPhotoTags: "",
-          downloadMedia: "",
-          location: "C:\\Users\\Rithvij\\AppData\\Local\\Temp\\simkl-movies",
-          // TODO(#14): this won't work as arrays aren't supported by `stringify`
-          // location: "C:\\Users\\Rithvij\\AppData\\Local\\Temp\\simkl-movies2",
-          "prefs[hidden]": 2,
-          "prefs[useLocalAssets]": 0,
-          "prefs[useExternalExtras]": 1,
-          "X-Plex-Token": plexToken,
-        }),
-      {
-        headers: {
-          accept: "application/xml",
-        },
-        method: "POST",
-      }
-    );
-  };
-
   const installedPlexAgents = async (
     { plexToken, plexApiBaseURL },
     mediaType = "movies"
   ) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${plexApiBaseURL}system/agents?` +
           stringifyPlex({
@@ -817,11 +840,13 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
             "X-Plex-Token": plexToken,
           }),
         {
+          signal: ac.signal,
           headers: {
             Accept: "application/xml",
           },
         }
       ).catch(throwError);
+      clearTimeout(timeoutId);
       broadcastOnlineStatus();
       if (resp.status !== 200) {
         return {
@@ -858,6 +883,44 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         agents: null,
       };
     }
+  };
+
+  /* These api calls might not be useful at the end */
+  /* Unused Api calls */
+
+  const createSection = async ({ plexToken, plexApiBaseURL }) => {
+    try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
+      let resp = await fetch(
+        `${plexApiBaseURL}library/sections?` +
+          stringifyPlex({
+            name: "Simkl-Movies",
+            type: "movie",
+            agent: "tv.plex.agents.movie",
+            scanner: "Plex Movie",
+            language: "en-US",
+            importFromiTunes: "",
+            enableAutoPhotoTags: "",
+            downloadMedia: "",
+            location: "C:\\Users\\Rithvij\\AppData\\Local\\Temp\\simkl-movies",
+            // TODO(#14): this won't work as arrays aren't supported by `stringify`
+            // location: "C:\\Users\\Rithvij\\AppData\\Local\\Temp\\simkl-movies2",
+            "prefs[hidden]": 2,
+            "prefs[useLocalAssets]": 0,
+            "prefs[useExternalExtras]": 1,
+            "X-Plex-Token": plexToken,
+          }),
+        {
+          signal: ac.signal,
+          headers: {
+            accept: "application/xml",
+          },
+          method: "POST",
+        }
+      ).catch(throwError);
+      clearTimeout(timeoutId);
+    } catch (error) {}
   };
 
   __API__.plex.oauth.oauthStart = oauthStart;

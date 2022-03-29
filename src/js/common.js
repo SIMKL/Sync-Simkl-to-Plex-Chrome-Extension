@@ -3,9 +3,12 @@
 const DefaultSyncPeriod = 12;
 const MaxRetryCount = 6;
 const AlarmKey = "plex-libray-sync";
+const FetchTimeoutDuration = 10 * 1000;
 const ServiceWorkerPingTimeout = 5 * 1000;
 const ServiceWorkerPingInterval = 20 * 1000;
 const BackoffMaxLimit = 10 * 1000;
+const AnidbXMLSourceURL =
+  "https://raw.githubusercontent.com/Anime-Lists/anime-lists/master/anime-list.xml";
 // TODO(#28): Simkl uninstall feedback url
 const UNINSTALL_URL =
   "https://google.com/?q=why+u+remove+such+nice+things+,+madness";
@@ -59,6 +62,11 @@ const getServerTime = async (simklResp) => {
   st = now;
   consoledebug("Fallback to client's clock time", st, error)();
   return { st, source: "client" };
+};
+
+// https://stackoverflow.com/a/52986361
+const isNumeric = (n) => {
+  return !isNaN(parseFloat(n)) && isFinite(n);
 };
 
 // Enums

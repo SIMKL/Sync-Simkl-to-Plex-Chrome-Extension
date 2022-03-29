@@ -27,23 +27,25 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       });
 
     if (!!token) {
-      let { valid } = await getLastActivity(token);
-      responseChannel(makeSuccessResponse({ authToken: token, valid }));
+      let { valid, error } = await getLastActivity(token);
+      responseChannel(makeSuccessResponse({ authToken: token, valid, error }));
       return;
     }
     let { simklOauthToken } = await chrome.storage.sync.get({
       simklOauthToken: null,
     });
     if (!!simklOauthToken) {
-      let { valid } = await getLastActivity(simklOauthToken);
+      let { valid, error } = await getLastActivity(simklOauthToken);
       consoledebug("Saved simkl token:", simklOauthToken)();
       responseChannel(
-        makeSuccessResponse({ authToken: simklOauthToken, valid })
+        makeSuccessResponse({ authToken: simklOauthToken, valid, error })
       );
       return;
     }
     // no token provided or found in localstorage
-    responseChannel(makeErrorResponse({ authToken: null, valid: false }));
+    responseChannel(
+      makeErrorResponse({ authToken: null, valid: false, error: null })
+    );
     return;
   };
 
@@ -225,7 +227,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       return { valid: false, info: data, status: resp.status };
     } catch (error) {
       broadcastOnlineStatus(false);
-      return { valid: false, info: data, status: resp.status };
+      return { valid: false, info: null, error: "offline" };
     }
   };
 

@@ -9,6 +9,9 @@
 		{
 			"path": "./scripts/logger"
 		},
+		{
+			"path": "./scripts/anidb"
+		},
 	],
 	"settings": {},
 	"extensions": {

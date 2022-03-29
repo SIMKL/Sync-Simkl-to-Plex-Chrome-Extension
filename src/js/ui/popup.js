@@ -319,7 +319,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           break;
         case ActionType.oauth.plex.loginCheck:
           // consoledebug(message)();
-          var { authToken, valid } = message;
+          var { authToken, valid, error } = message;
+          if (error) {
+            // TODO: offline maybe
+            // show error to user
+            consoleerror(error)();
+            break;
+          }
           if (valid) {
             // set plex button ui accordingly
             setUIPlexConnected();
@@ -340,8 +346,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           finishSimklOauth(message);
           break;
         case ActionType.oauth.simkl.loginCheck:
-          // consoledebug(message)();
-          var { authToken, valid } = message;
+          var { authToken, valid, error } = message;
+          if (error) {
+            // TODO: offline maybe
+            // show error to user
+            consoleerror(error)();
+            break;
+          }
           if (valid) {
             // set simkl button ui accordingly
             setUISimklConnected();
@@ -487,16 +498,19 @@ const retrySyncWithBackoff = async (
   maxRetries = MaxRetryCount
 ) => {
   document.body.classList.add(className);
-  let { failedTries } = await chrome.storage.local.get({ failedTries: 0 });
+  let { failedTries } = await chrome.storage.local.get({ failedTries: 1 });
+  consoledebug(
+    "Retry sync with backoff",
+    className,
+    `${failedTries}/${maxRetries}`
+  )();
   await chrome.storage.local.set({
     failedTries: failedTries + 1,
   });
-  if (failedTries > maxRetries) {
+  if (failedTries >= maxRetries) {
     uiSyncDisabled();
     stopLibrarySync();
-    chrome.storage.local.set({
-      failedTries: 0,
-    });
+    await chrome.storage.local.remove("failedTries");
     return;
   }
   let backOffmult = Math.min(Math.pow(2, failedTries), 30);
@@ -544,7 +558,11 @@ const startNextSyncTimer = async () => {
     });
   }
   consoledebug("Timer times", now(), lastSyncedTime, scheduledSyncTime)();
-  consoledebug("Timer conditions", now() > lastSyncedTime, now() < scheduledSyncTime)();
+  consoledebug(
+    "Timer conditions",
+    now() > lastSyncedTime,
+    now() < scheduledSyncTime
+  )();
   if (now() > lastSyncedTime && now() < scheduledSyncTime) {
     document.body.classList.add("sync-waiting-for-next-sync");
     let totSecs = parseInt(syncPeriod) * 60 * 60;
