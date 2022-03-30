@@ -458,42 +458,36 @@ const startBgSync = async (signal) => {
         // mediaType ∈ {'anime', 'movies', 'shows'}
         switch (mediaType) {
           case MediaType.movies:
-            for (let simklMovie of simklChanges[mediaType]) {
-              if (!simklMovie.movie.ids) {
-                consoledebug("Movie has no ids", simklMovie)();
+            for (let smkMovie of simklChanges[mediaType]) {
+              if (!smkMovie.movie.ids) {
+                consoledebug("Movie has no ids", smkMovie)();
                 continue;
               }
               currentIdx++;
               pMessage.value = totalSyncCount - currentIdx;
               chrome.runtime.sendMessage(pMessage);
 
-              let mPlexids = simklIdsToPlexIds(simklMovie.movie, mediaType);
+              let mPlexids = simklIdsToPlexIds(smkMovie.movie, mediaType);
               let plexMovie = mPlexids
                 .map((id) => movieGuidLut[id])
                 .filter((m) => m);
               if (plexMovie.length > 0) {
-                consoledebug(
-                  "Movie",
-                  plexMovie[0].title,
-                  "was found in plex library"
-                )();
-              } else {
                 // consoledebug(
-                //   "Movie was not found in plex library",
-                //   movie.movie.ids.slug
+                //   "Movie",
+                //   plexMovie[0].title,
+                //   "was found in plex library"
                 // )();
+              } else {
+                // Movie was not found in plex library
                 continue;
               }
-              // movie.status
-              // movie.user_rating
-              // consoledebug(movie)();
-              switch (simklMovie.status) {
+              switch (smkMovie.status) {
                 case "completed":
                   await __API__.plex.apis.markMovieWatched({
                     ...pconf,
                     movieKey: plexMovie[0].ratingKey,
                     name: plexMovie[0].title,
-                    userRating: simklMovie.user_rating,
+                    userRating: smkMovie.user_rating,
                   });
                   break;
                 case "plantowatch":
@@ -525,10 +519,10 @@ const startBgSync = async (signal) => {
               chrome.runtime.sendMessage(pMessage);
 
               let mPlexids = simklIdsToPlexIds(smkShow.show, mediaType);
-              let plxShow = mPlexids
+              let plexShow = mPlexids
                 .map((id) => showsGuidLut[id])
                 .filter((s) => s);
-              if (plxShow.length > 0) {
+              if (plexShow.length > 0) {
                 // console.log(
                 //   "Show",
                 //   plexShow[0].title,
@@ -550,10 +544,10 @@ const startBgSync = async (signal) => {
                   // mark whole thing as watched
                   await __API__.plex.apis.markShowWatched({
                     ...pconf,
-                    showKey: plxShow[0].ratingKey,
-                    name: plxShow[0].title,
+                    showKey: plexShow[0].ratingKey,
+                    name: plexShow[0].title,
                     userRating: smkShow.user_rating,
-                    isAnime: mediaType == "anime",
+                    isAnime: false,
                   });
                   break;
                 case "watching":
@@ -564,16 +558,16 @@ const startBgSync = async (signal) => {
                 case "notinteresting":
                 case "hold":
                 case "plantowatch":
-                  // see what items were watched
+                  // see what items are watched
                   // and efficiently mark them as watched
                   // i.e. if a whole season is done use season watched plex api method
-                  consoledebug(
-                    "Show",
-                    plxShow[0].title,
-                    "was found in plex library"
-                  )();
-                  let plxShowSeasons = plexSeasonList.map((l) =>
-                    l.filter((s) => s.parentRatingKey == plxShow[0].ratingKey)
+                  // consoledebug(
+                  //   "Show",
+                  //   plexShow[0].title,
+                  //   "was found in plex library"
+                  // )();
+                  let plexShowSeasons = plexSeasonList.map((l) =>
+                    l.filter((s) => s.parentRatingKey == plexShow[0].ratingKey)
                   );
                   if (
                     smkShow.watched_episodes_count +
@@ -581,22 +575,22 @@ const startBgSync = async (signal) => {
                     smkShow.total_episodes_count
                   ) {
                     // mark all aired seasons as watched
-                    plxShowSeasons.forEach((l) => {
+                    plexShowSeasons.forEach((l) => {
                       l.forEach((s) => {
-                        plxEpisodesList.map((l) => {});
+                        // plxEpisodesList.map((l) => {});
                         __API__.plex.apis.markSeasonWatched({
                           ...pconf,
                           seasonKey: s.ratingKey,
-                          name: `${plxShow[0].title}: ${s.title}`,
+                          name: `${plexShow[0].title}: ${s.title}`,
                         });
                       });
                     });
                   } else {
-                    // TODO: season by season? episode by episode?
+                    // season by season or episode by episode
                     // detect if a season has been fully watched
                     // if so need to be careful with sending too many requests to plex
-                    console.log(`Show ${plxShow[0].title}`);
-                    if ("seasons" in smkShow)
+                    console.log(`Show ${plexShow[0].title}`);
+                    if ("seasons" in smkShow) {
                       smkShow.seasons.forEach(async (smkSeason) => {
                         console.log(`Season ${smkSeason.number}`);
                         if ("total" in smkSeason) {
@@ -604,13 +598,13 @@ const startBgSync = async (signal) => {
                             await __API__.plex.apis.markSeasonWatched({
                               ...pconf,
                               seasonKey: smkSeason.ratingKey,
-                              name: `${plxShow[0].title}: ${smkSeason.title}`,
+                              name: `${plexShow[0].title}: ${smkSeason.title}`,
                             });
                             return;
                           }
                         }
                         smkSeason.episodes.forEach(async (smkEpisode) => {
-                          let plexEpkey = `${plxShow[0].ratingKey}-s${smkSeason.number}e${smkEpisode.number}`;
+                          let plexEpkey = `${plexShow[0].ratingKey}-s${smkSeason.number}e${smkEpisode.number}`;
                           if (plexEpkey in episodeSeasonS0mE0nLut) {
                             await __API__.plex.apis.markEpisodeWatched({
                               ...pconf,
@@ -621,14 +615,15 @@ const startBgSync = async (signal) => {
                           }
                         });
                       });
+                    }
                   }
                   if (smkShow.user_rating) {
                     await __API__.plex.apis.rateMediaItem(
                       {
                         ...pconf,
-                        plexRatingKey: plxShow[0].ratingKey,
+                        plexRatingKey: plexShow[0].ratingKey,
                         info: {
-                          name: plxShow[0].title,
+                          name: plexShow[0].title,
                           type: "show",
                         },
                       },
@@ -645,17 +640,16 @@ const startBgSync = async (signal) => {
             // TODO(#26): handle anime differently
             // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
             // as a reference
-            // let tvdbSlugsS = [];
-            for (let anime of simklChanges[mediaType]) {
-              if (!anime.show.ids) {
-                consoledebug("Show has no ids", anime)();
+            for (let smkAnime of simklChanges[mediaType]) {
+              if (!smkAnime.show.ids) {
+                consoledebug("Show has no ids", smkAnime)();
                 continue;
               }
               currentIdx++;
               pMessage.value = totalSyncCount - currentIdx;
               chrome.runtime.sendMessage(pMessage);
 
-              let mPlexids = simklIdsToPlexIds(anime.show, mediaType);
+              let mPlexids = simklIdsToPlexIds(smkAnime.show, mediaType);
               let anidbId = mPlexids.filter((id) => id.startsWith("anidb://"));
               if (anidbtvdbIdsLut[anidbId]) {
                 // Anime's anidbid is in lut
@@ -664,44 +658,50 @@ const startBgSync = async (signal) => {
                 mPlexids = [...new Set(mPlexids)];
               } else {
                 if (mPlexids.length < 2)
-                  consoledebug(
+                  consolewarn(
                     "Panic: Anime's anidbid is not in anime-list.xml file",
                     mPlexids,
-                    anime.show.ids
+                    smkAnime.show.ids
                   )();
               }
 
-              if (anime.anime_type === "movie") {
+              if (smkAnime.anime_type === "movie") {
                 // handle anime movies
                 let plexAnimeMovie = mPlexids
                   .map((id) => movieGuidLut[id])
                   .filter((a) => a);
                 if (plexAnimeMovie.length > 0) {
-                  consoledebug(
-                    "Anime Movie was found in plex library",
-                    plexAnimeMovie,
-                    mPlexids
-                  )();
-                  if (anidbtvdbS0mE0nMappings[anidbId]) {
-                    consoledebug(
-                      anidbtvdbS0mE0nMappings[anidbId],
-                      anidbEpisodeMapping(anidbtvdbS0mE0nMappings[anidbId])
-                    )();
+                  // consoledebug(
+                  //   "Anime Movie was found in plex library",
+                  //   plexAnimeMovie,
+                  //   mPlexids
+                  // )();
+                  // if (anidbtvdbS0mE0nMappings[anidbId]) {
+                  //   consoledebug(
+                  //     anidbtvdbS0mE0nMappings[anidbId],
+                  //     anidbEpisodeMapping(anidbtvdbS0mE0nMappings[anidbId])
+                  //   )();
+                  // }
+                  switch (smkAnime.status) {
+                    case "completed":
+                      await __API__.plex.apis.markMovieWatched({
+                        ...pconf,
+                        movieKey: plexAnimeMovie[0].ratingKey,
+                        name: plexAnimeMovie[0].title,
+                        userRating: smkAnime.user_rating,
+                      });
+                      break;
+                    // none of these apply to movies in plex
+                    // watching can apply if simkl knows the watching timestamp
+                    case "watching":
+                    case "notinteresting":
+                    case "hold":
+                    // TODO: next release can have this after library entries can be created
+                    case "plantowatch":
+                      break;
+                    default:
+                      break;
                   }
-                }
-                switch (anime.status) {
-                  case "completed":
-                    break;
-                  // none of these apply to movies in plex
-                  // watching can apply if simkl knows the watching timestamp
-                  case "watching":
-                  case "notinteresting":
-                  case "hold":
-                  // TODO: next release can have this after library entries can be created
-                  case "plantowatch":
-                    break;
-                  default:
-                    break;
                 }
                 continue;
               }
@@ -713,17 +713,28 @@ const startBgSync = async (signal) => {
                 // consoledebug(
                 //   "Anime was found in plex library",
                 //   plexAnime,
-                //   anidbtvdbS0mE0nMappings[anidbId],
-                //   // anidbEpisodeMapping(anidbtvdbS0mE0nMappings[anidbId], 0),
                 //   mPlexids
                 // )();
+                // if (anidbtvdbS0mE0nMappings[anidbId]) {
+                //   consoledebug(
+                //     anidbtvdbS0mE0nMappings[anidbId],
+                //     anidbEpisodeMapping(anidbtvdbS0mE0nMappings[anidbId], 0)
+                //   )();
+                // }
               } else {
                 // Anime was not found in plex library
                 continue;
               }
-              switch (anime.status) {
+              switch (smkAnime.status) {
                 case "completed":
-                  // TODO: mark whole thing as watched
+                  // mark whole thing as watched
+                  await __API__.plex.apis.markShowWatched({
+                    ...pconf,
+                    showKey: plexAnime[0].ratingKey,
+                    name: plexAnime[0].title,
+                    userRating: smkAnime.user_rating,
+                    isAnime: true,
+                  });
                   break;
                 case "watching":
                 // The next 3 cases can't be handled by us
@@ -735,6 +746,61 @@ const startBgSync = async (signal) => {
                   // TODO: see what items are watched
                   // and efficiently mark them as watched
                   // i.e. if a whole season is done use season watched plex api method
+                  let plexAnimeSeasons = plexSeasonList.map((l) =>
+                    l.filter((s) => s.parentRatingKey == plexAnime[0].ratingKey)
+                  );
+                  consoledebug(
+                    "Anime",
+                    plexAnime[0].title,
+                    "was found in plex library",
+                    plexAnime,
+                    plexAnimeSeasons
+                  )();
+                  // TODO: anidb <-> tvdb magic
+                  // season by season or episode by episode
+                  // detect if a season has been fully watched
+                  // if so need to be careful with sending too many requests to plex
+                  console.log(`Anime ${plexAnime[0].title}`, plexAnime, smkAnime);
+                  if ("seasons" in smkAnime) {
+                    smkAnime.seasons.forEach(async (smkSeason) => {
+                      console.log(`Season ${smkSeason.number}`, smkSeason);
+                      if ("total" in smkSeason) {
+                        if (smkSeason.total == smkSeason.episodes.length) {
+                          await __API__.plex.apis.markSeasonWatched({
+                            ...pconf,
+                            seasonKey: smkSeason.ratingKey,
+                            name: `${plexAnime[0].title}: ${smkSeason.title}`,
+                          });
+                          return;
+                        }
+                      }
+                      smkSeason.episodes.forEach(async (smkEpisode) => {
+                        let plexEpkey = `${plexAnime[0].ratingKey}-s${smkSeason.number}e${smkEpisode.number}`;
+                        if (plexEpkey in episodeSeasonS0mE0nLut) {
+                          await __API__.plex.apis.markEpisodeWatched({
+                            ...pconf,
+                            episodeKey:
+                              episodeSeasonS0mE0nLut[plexEpkey].ratingKey,
+                            name: `${smkAnime.show.title} S${smkSeason.number}E${smkEpisode.number}`,
+                          });
+                        }
+                      });
+                    });
+                  }
+                  // Handle rating
+                  if (smkAnime.user_rating) {
+                    await __API__.plex.apis.rateMediaItem(
+                      {
+                        ...pconf,
+                        plexRatingKey: plexAnime[0].ratingKey,
+                        info: {
+                          name: plexAnime[0].title,
+                          type: "anime",
+                        },
+                      },
+                      smkAnime.user_rating
+                    );
+                  }
                   break;
                 default:
                   break;
