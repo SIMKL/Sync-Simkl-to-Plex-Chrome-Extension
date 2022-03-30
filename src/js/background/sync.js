@@ -292,7 +292,10 @@ const getPlexShowList = async (libraries, pconf, seasons = false) => {
 };
 
 const startBgSync = async (signal) => {
-  let { anidbtvdbIdsLut } = await fetchAniDBTvDBMappings(signal);
+  let { anidbtvdbIdsLut, anidbtvdbS0mE0nMappings } =
+    await fetchAniDBTvDBMappings(signal);
+  // consoledebug(anidbtvdbIdsLut, anidbtvdbS0mE0nMappings)();
+  // globalThis.AnimeListXMLInfo = { anidbtvdbIdsLut, anidbtvdbS0mE0nMappings };
 
   let config = await userConfig();
   let { plexInstanceUrl, syncPeriod, plexOauthToken, simklOauthToken } = config;
@@ -655,109 +658,94 @@ const startBgSync = async (signal) => {
               let mPlexids = simklIdsToPlexIds(anime.show, mediaType);
               let anidbId = mPlexids.filter((id) => id.startsWith("anidb://"));
               if (anidbtvdbIdsLut[anidbId]) {
+                // Anime's anidbid is in lut
                 mPlexids.push(...anidbtvdbIdsLut[anidbId]);
-                // consoledebug(
-                //   "Anime's tvdb id is in lut",
-                //   anidbtvdbIdsLut[anidbId]
-                //   // anime,
-                // )();
+                // remove duplicate entries
+                mPlexids = [...new Set(mPlexids)];
               } else {
-                // consoledebug(
-                //   "Anime's anidb id is not in anime-list.xml file",
-                //   mPlexids,
-                //   "\n---\n",
-                //   anime.show.ids,
-                //   "---\n"
-                // )();
+                if (mPlexids.length < 2)
+                  consoledebug(
+                    "Panic: Anime's anidbid is not in anime-list.xml file",
+                    mPlexids,
+                    anime.show.ids
+                  )();
               }
-
-              // remove duplicate entries
-              mPlexids = [...new Set(mPlexids)];
 
               if (anime.anime_type === "movie") {
-                // TODO handle anime movies
-              } else {
+                // handle anime movies
+                let plexAnimeMovie = mPlexids
+                  .map((id) => movieGuidLut[id])
+                  .filter((a) => a);
+                if (plexAnimeMovie.length > 0) {
+                  consoledebug(
+                    "Anime Movie was found in plex library",
+                    plexAnimeMovie,
+                    mPlexids
+                  )();
+                  if (anidbtvdbS0mE0nMappings[anidbId]) {
+                    consoledebug(
+                      anidbtvdbS0mE0nMappings[anidbId],
+                      anidbEpisodeMapping(anidbtvdbS0mE0nMappings[anidbId])
+                    )();
+                  }
+                }
+                switch (anime.status) {
+                  case "completed":
+                    break;
+                  // none of these apply to movies in plex
+                  // watching can apply if simkl knows the watching timestamp
+                  case "watching":
+                  case "notinteresting":
+                  case "hold":
+                  // TODO: next release can have this after library entries can be created
+                  case "plantowatch":
+                    break;
+                  default:
+                    break;
+                }
+                continue;
               }
-              // continue;
+
               let plexAnime = mPlexids
                 .map((id) => showsGuidLut[id])
                 .filter((a) => a);
               if (plexAnime.length > 0) {
-                consoledebug(
-                  "Anime was found in plex library",
-                  plexAnime,
-                  mPlexids
-                )();
+                // consoledebug(
+                //   "Anime was found in plex library",
+                //   plexAnime,
+                //   anidbtvdbS0mE0nMappings[anidbId],
+                //   // anidbEpisodeMapping(anidbtvdbS0mE0nMappings[anidbId], 0),
+                //   mPlexids
+                // )();
               } else {
-                consolelog(
-                  "Anime was not found in plex library",
-                  // anime.show.ids.slug,
-                  mPlexids,
-                  anime.status
-                )();
+                // Anime was not found in plex library
                 continue;
               }
-              // let keys = Object.keys(anime.show.ids);
-              // if (keys.includes("tvdbslug") && !keys.includes("tvdb")) {
-              //   tvdbSlugsS.push(anime.show.ids);
-              // }
               switch (anime.status) {
                 case "completed":
                   // TODO: mark whole thing as watched
                   break;
                 case "watching":
+                // The next 3 cases can't be handled by us
+                // Because in plex there is no concept of these
+                // handle these two as watching and mark episodes
+                case "notinteresting":
+                case "hold":
+                case "plantowatch":
                   // TODO: see what items are watched
                   // and efficiently mark them as watched
                   // i.e. if a whole season is done use season watched plex api method
-                  break;
-                // The next 3 cases can't be handled by us
-                // Because in plex there is no concept of these
-                case "notinteresting":
-                  break;
-                case "hold":
-                  break;
-                case "plantowatch":
                   break;
                 default:
                   break;
               }
             }
-            // consolelog(tvdbSlugsS)();
             break;
           default:
             break;
         }
       }
     }
-
-    if (false) {
-      // for each plex item loop
-      let totalSyncCount = plexMediaList.reduce((accum, item) => {
-        return accum + item.length;
-      }, 0);
-      consolelog("Total Plex items", totalSyncCount)();
-
-      // TODOOOO(#27): start sync
-      let currentIdx = 0;
-      let pMessage = {
-        type: ActionType.action,
-        action: ActionType.ui.sync.progress,
-        value: currentIdx,
-      };
-      for (let mediaType of plexMediaList) {
-        for (let _item of mediaType) {
-          if (!!signal && signal.aborted) {
-            consoledebug("User canceled sync")();
-            return;
-          }
-          currentIdx++;
-          pMessage.value = totalSyncCount - currentIdx;
-          chrome.runtime.sendMessage(pMessage);
-          await sleep(20);
-        }
-      }
-    }
-
     syncDone(serverTime);
   } else {
     if (!simklOauthToken) {
@@ -843,132 +831,171 @@ const simklShowIdstoPlexIds = (media) =>
 const simklAnimeIdstoPlexIds = (media) =>
   simklIdsToPlexIds(media.show, MediaType.anime);
 
-const fetchAniDBTvDBMappings = async (signal) => {
-  // return null;
+const fetchAnimeListXML = async (signal) => {
+  if ("AnimeListXML" in globalThis) return globalThis.AnimeListXML;
   try {
     let resp = await fetch(AnidbXMLSourceURL, { signal }).catch((err) => {
       throw err;
     });
     let data = await resp.text();
-    let anidbtvdbIdsLut = {};
-    let anidbtvdbS0mE0nMappings = {};
-    const xmlData = txml.parse(data);
-    consoledebug(xmlData)();
-    for (let anime of xmlData[1]["children"]) {
-      let anidbId = `anidb://${anime.attributes.anidbid}`;
-      anidbtvdbIdsLut[anidbId] = Object.keys(anime.attributes)
-        .filter((k) => k.endsWith("id"))
-        .map((key) => `${key.replace(/id$/, "")}://${anime.attributes[key]}`);
-      if ("tvdbid" in anime.attributes && isNumeric(anime.attributes.tvdbid)) {
-        if (!("defaulttvdbseason" in anime.attributes)) {
-          anidbtvdbS0mE0nMappings[anidbId] = anime.attributes;
-          continue;
-        }
-        if (anime.attributes.defaulttvdbseason === "a") {
-          // consoledebug(anime)();
-          /* for (map of anime.findall(
-            `./mapping-list/mapping/[@anidbseason="1"]`
-          )) {
-            if (map.text !== null) {
-              l = map.text.split(";");
-              for (eps of l) {
-                // for (eps of l[1:-1]) {
-                eps = eps.split("-");
-                if (parseInt(eps[0]) == episode)
-                  return (
-                    parseInt(anime.attributes["tvdbid"]),
-                    parseInt(map.attributes["tvdbseason"]),
-                    parseInt(eps[1])
-                  );
-              }
-            }
-            if ("start" in map.attributes) {
-              if (
-                parseInt(map.attributes["start"]) <=
-                episode <=
-                parseInt(map.attributes["end"])
-              ) {
-                if ("offset" in map.attributes)
-                  return (
-                    parseInt(anime.attributes["tvdbid"]),
-                    parseInt(map.attributes["tvdbseason"]),
-                    episode + parseInt(map.attributes["offset"])
-                  );
-                else
-                  return (
-                    parseInt(anime.attributes["tvdbid"]),
-                    parseInt(map.attributes["tvdbseason"]),
-                    episode
-                  );
-              }
-            }
-          } */
-        } else if (isNumeric(anime.attributes.defaulttvdbseason)) {
-          // consoledebug(anime)();
-          let mappingList = anime.children.filter(
-            (c) => c.tagName === "mapping-list"
-          );
-          if (mappingList.length > 0) {
-            mappingList = mappingList[0];
-            const mappingLists = mappingList.children.filter(
-              (mapping) => mapping.attributes.anidbseason == "1"
-            );
-            // consoledebug(mappingLists)();
-            for (map of mappingLists) {
-              // consoledebug(map)();
-              //  for (map of anime.findall(
-              //    `./mapping-list/mapping/[@anidbseason="1"]`
-              //  )) {
-              // if (map.text !== null) {
-              //   l = map.text.split(";");
-              //   for (eps of l) {
-              //     // for (eps in l[1:-1]) {
-              //     eps = eps.split("-");
-              //     if (parseInt(eps[0]) == episode)
-              //       return (
-              //         parseInt(anime.attributes["tvdbid"]),
-              //         parseInt(map.attributes["tvdbseason"]),
-              //         parseInt(eps[1])
-              //       );
-              //   }
-              // }
-              // if ("start" in map.attributes) {
-              //   if (
-              //     parseInt(map.attributes["start"]) <=
-              //     episode <=
-              //     parseInt(map.attributes["end"])
-              //   )
-              //     return (
-              //       parseInt(anime.attributes["tvdbid"]),
-              //       parseInt(map.attributes["tvdbseason"]),
-              //       episode + parseInt(map.attributes["offset"])
-              //     );
-              // }
-            }
-          }
-          // if ("episodeoffset" in anime.attributes) {
-          //   return (
-          //     parseInt(anime.attributes["tvdbid"]),
-          //     parseInt(anime.attributes["defaulttvdbseason"]),
-          //     episode + parseInt(anime.attributes["episodeoffset"])
-          //   );
-          // } else {
-          //   return (
-          //     parseInt(anime.attributes["tvdbid"]),
-          //     parseInt(anime.attributes["defaulttvdbseason"]),
-          //     episode
-          //   );
-          // }
-        }
-      } else if ("tmdbid" in anime.attributes) {
-        anidbtvdbS0mE0nMappings[anidbId] = anime.attributes.tmdbid;
-      } else if ("imdbid" in anime.attributes) {
-        anidbtvdbS0mE0nMappings[anidbId] = anime.attributes.imdbid;
-      }
-    }
-    return { anidbtvdbIdsLut };
+    globalThis.AnimeListXML = data;
+    return data;
   } catch (error) {
     consoleerror(error, typeof error)();
+  }
+  return null;
+};
+
+const fetchAniDBTvDBMappings = async (signal) => {
+  let xmlData = await fetchAnimeListXML(signal);
+  xmlData = txml.parse(xmlData);
+  consoledebug(xmlData)();
+
+  let anidbtvdbIdsLut = {};
+  let anidbtvdbS0mE0nMappings = {};
+
+  for (let animNode of xmlData[1]["children"]) {
+    let anidbId = `anidb://${animNode.attributes["anidbid"]}`;
+    anidbtvdbIdsLut[anidbId] = Object.keys(animNode.attributes)
+      .filter((k) => k.endsWith("id"))
+      // imdbid="...", tmdbid, tvdbid etc. will become `imdb://...` etc.
+      .map((key) => `${key.replace(/id$/, "")}://${animNode.attributes[key]}`);
+    anidbtvdbS0mE0nMappings[anidbId] = animNode;
+  }
+  return { anidbtvdbIdsLut, anidbtvdbS0mE0nMappings };
+};
+
+const anidbEpisodeMapping = (anime, episode = 0) => {
+  if ("tvdbid" in anime.attributes && isNumeric(anime.attributes["tvdbid"])) {
+    if (!("defaulttvdbseason" in anime.attributes)) {
+      return anime.attributes;
+    }
+    if (anime.attributes["defaulttvdbseason"] === "a") {
+      // consoledebug(anime)();
+      let mappingList = anime.children.filter(
+        (c) => c.tagName === "mapping-list"
+      );
+      if (mappingList.length > 0) {
+        mappingList = mappingList[0];
+        const mappingLists = mappingList.children.filter(
+          (mapping) => mapping.attributes["anidbseason"] == "1"
+        );
+        for (map of mappingLists) {
+          if (map.children.length > 0) {
+            l = map.children[0].split(";");
+            for (eps of l.slice(1, -1)) {
+              eps = eps.split("-");
+              if (parseInt(eps[0]) == episode) {
+                return (
+                  "tvdb://" +
+                  [
+                    parseInt(anime.attributes["tvdbid"]),
+                    parseInt(map.attributes["tvdbseason"]),
+                    parseInt(eps[1]),
+                  ].join("/")
+                );
+              }
+            }
+          }
+        }
+        if ("start" in map.attributes) {
+          if (
+            parseInt(map.attributes["start"]) <=
+            episode <=
+            parseInt(map.attributes["end"])
+          ) {
+            if ("offset" in map.attributes) {
+              return (
+                "tvdb://" +
+                [
+                  parseInt(anime.attributes["tvdbid"]),
+                  parseInt(map.attributes["tvdbseason"]),
+                  episode + parseInt(map.attributes["offset"]),
+                ].join("/")
+              );
+            } else {
+              return (
+                "tvdb://" +
+                [
+                  parseInt(anime.attributes["tvdbid"]),
+                  parseInt(map.attributes["tvdbseason"]),
+                  episode,
+                ].join("/")
+              );
+            }
+          }
+        }
+      }
+    } else if (isNumeric(anime.attributes["defaulttvdbseason"])) {
+      let mappingList = anime.children.filter(
+        (c) => c.tagName === "mapping-list"
+      );
+      if (mappingList.length > 0) {
+        mappingList = mappingList[0];
+        const mappingLists = mappingList.children.filter(
+          (mapping) => mapping.attributes["anidbseason"] == "1"
+        );
+        for (map of mappingLists) {
+          if (map.children.length > 0) {
+            l = map.children[0].split(";");
+            for (eps of l.slice(1, -1)) {
+              eps = eps.split("-");
+              if (parseInt(eps[0]) == episode) {
+                return (
+                  "tvdb://" +
+                  [
+                    parseInt(anime.attributes["tvdbid"]),
+                    parseInt(map.attributes["tvdbseason"]),
+                    parseInt(eps[1]),
+                  ].join("/")
+                );
+              }
+            }
+          }
+          if ("start" in map.attributes) {
+            if (
+              parseInt(map.attributes["start"]) <=
+              episode <=
+              parseInt(map.attributes["end"])
+            ) {
+              return (
+                "tvdb://" +
+                [
+                  parseInt(anime.attributes["tvdbid"]),
+                  parseInt(map.attributes["tvdbseason"]),
+                  episode + parseInt(map.attributes["offset"]),
+                ].join("/")
+              );
+            }
+          }
+        }
+      }
+      if ("episodeoffset" in anime.attributes) {
+        return (
+          "tvdb://" +
+          [
+            parseInt(anime.attributes["tvdbid"]),
+            parseInt(anime.attributes["defaulttvdbseason"]),
+            episode + parseInt(anime.attributes["episodeoffset"]),
+          ].join("/")
+        );
+      } else {
+        return (
+          "tvdb://" +
+          [
+            parseInt(anime.attributes["tvdbid"]),
+            parseInt(anime.attributes["defaulttvdbseason"]),
+            episode,
+          ].join("/")
+        );
+      }
+    }
+  }
+  if ("tmdbid" in anime.attributes) {
+    return `tmdb://${anime.attributes["tmdbid"]}`;
+  }
+  if ("imdbid" in anime.attributes) {
+    return `imdb://${anime.attributes["imdbid"]}`;
   }
   return null;
 };
@@ -1018,7 +1045,7 @@ const zipSimklLibrary = async () => {
   return zip;
 };
 
-var saveZipFile = async (zip, type = "blob") => {
+const saveZipFile = async (zip, type = "blob") => {
   const logLabel = `save_zip_${type}`;
   consoletime(logLabel)();
   let donee = false;
