@@ -58,7 +58,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
         redirect_uri: SimklRedirectURI,
         grant_type: "authorization_code",
       };
-      let resp = await fetch("https://api.simkl.com/oauth/token", {
+      let resp = await fetch(`${SimklAPIDomain}/oauth/token`, {
         method: "POST",
         headers: {
           accept: "application/json",
@@ -149,7 +149,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       let responses = await Promise.all(
         types.map((type) =>
           fetch(
-            `https://api.simkl.com/sync/all-items/${type}?` +
+            `${SimklAPIDomain}/sync/all-items/${type}?` +
               "episode_watched_at=yes" +
               (dates && type in dates ? `&date_from=${dates[type]}` : "") +
               (type == "movies" ? "" : "&extended=full"),
@@ -209,7 +209,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 
   const getLastActivity = async (token, responseChannel = null) => {
     try {
-      let resp = await fetch("https://api.simkl.com/sync/activities", {
+      let resp = await fetch(`${SimklAPIDomain}/sync/activities`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -233,7 +233,97 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 
   const getUserInfo = async (token) => {
     try {
-      let resp = await fetch("https://api.simkl.com/users/settings", {
+      let resp = await fetch(`${SimklAPIDomain}/users/settings`, {
+        headers: {
+          "Content-Type": "application/json",
+          "simkl-api-key": SimklClientID,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      broadcastOnlineStatus();
+      if (resp.status == 200) {
+        return await resp.json();
+      }
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      return null;
+    }
+  };
+
+  const getMediaById = async (token, mPlexids) => {
+    // TODO
+    try {
+      let resp = await fetch(
+        `${SimklAPIDomain}/search/id?` +
+          stringify({
+            imdb: "tt1972591",
+          }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "simkl-api-key": SimklClientID,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      broadcastOnlineStatus();
+      if (resp.status == 200) {
+        return await resp.json();
+      }
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      return null;
+    }
+  };
+
+  const syncItemsToSimklList = async (token, items) => {
+    // TODO
+    // items should be of the form
+    /*
+      https://simkl.docs.apiary.io/#reference/sync/remove-ratings/add-items-to-specific-list
+      {
+        "movies": [{
+          "title": "", // optional
+          "year": <int|str>, // optional
+          "to": "<plantowatch|completed|watching|hold|notinteresting>", // required
+          "watched_at": "2014-10-10T22:10:00", // optional
+          "ids": {
+            "<source>": "<id>" // atleast one required for simkl to match
+          }
+        }, ...],
+        "shows": [
+          { <same as movies except watched_at>* },
+          ...
+        ]
+      }
+    */
+
+    try {
+      let resp = await fetch(`${SimklAPIDomain}/sync/add-to-list`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "simkl-api-key": SimklClientID,
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(items),
+      });
+      broadcastOnlineStatus();
+      if (resp.status == 200) {
+        return await resp.json();
+      }
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      return null;
+    }
+  };
+
+  const syncAddItemsToHistory = async (token, items) => {
+    // TODO
+    try {
+      let resp = await fetch(`${SimklAPIDomain}/sync/history`, {
+        method: "POST",
+        body: JSON.stringify(items),
         headers: {
           "Content-Type": "application/json",
           "simkl-api-key": SimklClientID,
@@ -252,7 +342,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 
   const getShowEpisodeList = async (token, showID) => {
     try {
-      let resp = await fetch(`https://api.simkl.com/tv/episodes/${showID}`, {
+      let resp = await fetch(`${SimklAPIDomain}/tv/episodes/${showID}`, {
         headers: {
           "Content-Type": "application/json",
           "simkl-api-key": SimklClientID,
@@ -275,5 +365,8 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   __API__.simkl.apis.getLastActivity = getLastActivity;
   __API__.simkl.apis.getAllItems = getAllItems;
   __API__.simkl.apis.getUserInfo = getUserInfo;
+  __API__.simkl.apis.getMediaById = getMediaById;
+  __API__.simkl.apis.syncItemsToSimklList = syncItemsToSimklList;
+  __API__.simkl.apis.syncAddItemsToHistory = syncAddItemsToHistory;
   __API__.simkl.apis.getShowEpisodeList = getShowEpisodeList;
 })();

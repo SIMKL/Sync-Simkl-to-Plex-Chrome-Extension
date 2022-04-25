@@ -7,6 +7,7 @@ const FetchTimeoutDuration = 10 * 1000;
 const ServiceWorkerPingTimeout = 5 * 1000;
 const ServiceWorkerPingInterval = 20 * 1000;
 const BackoffMaxLimit = 10 * 1000;
+const SimklAPIDomain = "https://api.simkl.com"
 const AnidbXMLSourceURL =
   "https://raw.githubusercontent.com/Anime-Lists/anime-lists/master/anime-list.xml";
 // TODO(#28): Simkl uninstall feedback url
@@ -41,7 +42,7 @@ const getServerTime = async (simklResp) => {
   try {
     // https://api.simkl.com redirects to apiary
     // use a valid sub route instead
-    let simkltime = await fetch("https://api.simkl.com/search/random", {
+    let simkltime = await fetch(`${SimklAPIDomain}/search/random`, {
       method: "HEAD",
     }).catch((err) => {
       error = err;
