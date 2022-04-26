@@ -676,12 +676,6 @@ const startBgSync = async (signal) => {
                   //   plexAnimeMovie,
                   //   mPlexids
                   // )();
-                  // if (anidbtvdbS0mE0nMappings[anidbId]) {
-                  //   consoledebug(
-                  //     anidbtvdbS0mE0nMappings[anidbId],
-                  //     anidbEpisodeMapping(anidbtvdbS0mE0nMappings[anidbId])
-                  //   )();
-                  // }
                   switch (smkAnime.status) {
                     case "completed":
                       await __API__.plex.apis.markMovieWatched({
@@ -749,21 +743,28 @@ const startBgSync = async (signal) => {
                   let plexAnimeSeasons = plexSeasonList.map((l) =>
                     l.filter((s) => s.parentRatingKey == plexAnime[0].ratingKey)
                   );
-                  consoledebug(
-                    "Anime",
-                    plexAnime[0].title,
-                    "was found in plex library",
-                    plexAnime,
-                    plexAnimeSeasons
-                  )();
+                  // consoledebug(
+                  //   "Anime",
+                  //   plexAnime[0].title,
+                  //   "was found in plex library",
+                  //   plexAnime,
+                  //   plexAnimeSeasons
+                  // )();
                   // TODO: anidb <-> tvdb magic
                   // season by season or episode by episode
                   // detect if a season has been fully watched
                   // if so need to be careful with sending too many requests to plex
-                  console.log(`Anime ${plexAnime[0].title}`, plexAnime, smkAnime);
+                  // console.log(
+                  //   `Anime ${plexAnime[0].title}`,
+                  //   plexAnime,
+                  //   smkAnime
+                  // );
+                  console.log(
+                    `Anime [Plex: ${plexAnime[0].title}, Simkl: ${smkAnime.show.title}]`
+                  );
                   if ("seasons" in smkAnime) {
                     smkAnime.seasons.forEach(async (smkSeason) => {
-                      console.log(`Season ${smkSeason.number}`, smkSeason);
+                      // console.log(`Simkl Season ${smkSeason.number}`);
                       if ("total" in smkSeason) {
                         if (smkSeason.total == smkSeason.episodes.length) {
                           await __API__.plex.apis.markSeasonWatched({
@@ -775,13 +776,19 @@ const startBgSync = async (signal) => {
                         }
                       }
                       smkSeason.episodes.forEach(async (smkEpisode) => {
-                        let plexEpkey = `${plexAnime[0].ratingKey}-s${smkSeason.number}e${smkEpisode.number}`;
+                        let tvdbmappedInfo = anidbEpisodeMapping(
+                          anidbtvdbS0mE0nMappings[anidbId],
+                          smkEpisode.number
+                        );
+                        let parts = tvdbmappedInfo.split("/");
+                        let [_, __, ___, actualSeasonNo, actualEpNo] = parts;
+                        let plexEpkey = `${plexAnime[0].ratingKey}-s${actualSeasonNo}e${actualEpNo}`;
                         if (plexEpkey in episodeSeasonS0mE0nLut) {
                           await __API__.plex.apis.markEpisodeWatched({
                             ...pconf,
                             episodeKey:
                               episodeSeasonS0mE0nLut[plexEpkey].ratingKey,
-                            name: `${smkAnime.show.title} S${smkSeason.number}E${smkEpisode.number}`,
+                            name: `${smkAnime.show.title} S${actualSeasonNo}E${actualEpNo}`,
                           });
                         }
                       });
@@ -812,6 +819,9 @@ const startBgSync = async (signal) => {
         }
       }
     }
+
+    // TODO: plex to simkl sync
+
     syncDone(serverTime);
   } else {
     if (!simklOauthToken) {
@@ -966,9 +976,8 @@ const anidbEpisodeMapping = (anime, episode = 0) => {
         }
         if ("start" in map.attributes) {
           if (
-            parseInt(map.attributes["start"]) <=
-            episode <=
-            parseInt(map.attributes["end"])
+            parseInt(map.attributes["start"]) <= episode &&
+            episode <= parseInt(map.attributes["end"])
           ) {
             if ("offset" in map.attributes) {
               return (
@@ -1020,9 +1029,8 @@ const anidbEpisodeMapping = (anime, episode = 0) => {
           }
           if ("start" in map.attributes) {
             if (
-              parseInt(map.attributes["start"]) <=
-              episode <=
-              parseInt(map.attributes["end"])
+              parseInt(map.attributes["start"]) <= episode &&
+              episode <= parseInt(map.attributes["end"])
             ) {
               return (
                 "tvdb://" +
