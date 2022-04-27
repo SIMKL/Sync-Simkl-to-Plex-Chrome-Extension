@@ -1008,6 +1008,9 @@ const anidbEpisodeMapping = (anime, episode = 0) => {
       if (mappingList.length > 0) {
         mappingList = mappingList[0];
         const mappingLists = mappingList.children.filter(
+          // simkl uses anidb for anime
+          // and anidb will only have one season
+          // season 0 is specials so there are no seasons 2+
           (mapping) => mapping.attributes["anidbseason"] == "1"
         );
         for (map of mappingLists) {
