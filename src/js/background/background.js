@@ -41,6 +41,9 @@ let __API__ = {
       getArtWorks: f,
       getPosters: f,
       installedPlexAgents: f,
+      // unused
+      refreshLibrary: f,
+      createSection: f,
     },
   },
   simkl: {

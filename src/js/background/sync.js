@@ -593,6 +593,7 @@ const startBgSync = async (signal) => {
                     if ("seasons" in smkShow) {
                       smkShow.seasons.forEach(async (smkSeason) => {
                         console.log(`Season ${smkSeason.number}`);
+                        // TODO: `total` field is not available on backend, this is future proofing
                         if ("total" in smkSeason) {
                           if (smkSeason.total == smkSeason.episodes.length) {
                             await __API__.plex.apis.markSeasonWatched({
@@ -623,7 +624,7 @@ const startBgSync = async (signal) => {
                         ...pconf,
                         plexRatingKey: plexShow[0].ratingKey,
                         info: {
-                          name: plexShow[0].title,
+                          name: smkShow.show.title,
                           type: "show",
                         },
                       },
@@ -801,7 +802,7 @@ const startBgSync = async (signal) => {
                         ...pconf,
                         plexRatingKey: plexAnime[0].ratingKey,
                         info: {
-                          name: plexAnime[0].title,
+                          name: smkAnime.show.title,
                           type: "anime",
                         },
                       },

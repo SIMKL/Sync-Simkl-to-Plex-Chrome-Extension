@@ -466,6 +466,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   };
 
   const healthCheck = async () => {
+    // TODO: unused as of now
     return false;
   };
 
@@ -920,7 +921,49 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         }
       ).catch(throwError);
       clearTimeout(timeoutId);
-    } catch (error) {}
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      consoleerror(error)();
+      return {
+        status: null,
+        error,
+      };
+    }
+  };
+
+  const refreshLibrary = async ({ plexToken, plexApiBaseURL, sectionKey }) => {
+    try {
+      const ac = new AbortController();
+      // 5 second timeout:
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
+      // consoledebug("SW: fetch user info from plex.tv")();
+      let resp = await fetch(
+        `${plexApiBaseURL}library/sections/${sectionKey}/refresh?` +
+          stringifyPlex({
+            "X-Plex-Token": plexToken,
+          }),
+        {
+          headers: {
+            accept: "text/plain",
+          },
+        }
+      ).catch(throwError);
+      clearTimeout(timeoutId);
+      broadcastOnlineStatus();
+      if (resp.status !== 200) {
+        return {
+          status: resp.status,
+          error: await resp.text(),
+        };
+      }
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      consoleerror(error)();
+      return {
+        status: null,
+        error,
+      };
+    }
   };
 
   __API__.plex.oauth.oauthStart = oauthStart;
@@ -946,4 +989,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   __API__.plex.apis.getPosters = getPosters;
   __API__.plex.apis.getBgUrl = getBgUrl;
   __API__.plex.apis.installedPlexAgents = installedPlexAgents;
+
+  __API__.plex.apis.refreshLibrary = refreshLibrary;
+  __API__.plex.apis.createSection = createSection;
 })();
