@@ -175,8 +175,6 @@ const handleOauthIntercepts = async ({ tabId, url }) => {
     await chrome.tabs.update(tabId, {
       url: chrome.runtime.getURL("/popup.html#simkl-oauth"),
     });
-    // FIXME(#19): instead of reloading the tab chrome.runtime.sendMessage can be used
-    // await chrome.tabs.reload(tabId);
     let m = {
       type: ActionType.action,
       action: ActionType.oauth.simkl.redirect,

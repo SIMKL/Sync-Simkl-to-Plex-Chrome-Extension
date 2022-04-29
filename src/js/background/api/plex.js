@@ -169,6 +169,8 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   // TODO(#8): to remove the plex warning
   // we need to proxy this particular request
   // on simkl.com php backend
+  // not doing that as of now but using `http://<chrome_ext_id>`
+  // as the plex redirect uri instead.
   const plexRequestPIN = async () => {
     try {
       const ac = new AbortController();
@@ -361,7 +363,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           }
           return { error: "unexpected", libraries: null };
         } catch (error) {
-          // TODO(#10): invalid json response
+          // invalid json response
           return { error: error, libraries: null };
         }
       }
@@ -424,7 +426,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           consoledebug(data)();
           return { error: "unexpected", items: null };
         } catch (error) {
-          // TODO(#12): invalid json response
+          // invalid json response
           return { error: error, items: null };
         }
       }

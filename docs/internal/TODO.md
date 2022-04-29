@@ -8,7 +8,7 @@
     - [x] Simkl get authtoken
     - [x] Control flow
       - [x] Connect APIs to Plex, Simkl buttons
-      - [ ] Show errors/info messages in UI
+      - [x] Show errors/info messages in UI
       - [x] Reopening popup should resume state, use `localStorage` for persistance.
         - This is not an issue when in full tab
   - [x] Simkl
@@ -18,7 +18,7 @@
   - [x] Plex
     - [x] List out local libraries and their entries
     - [x] Update a library info and entry info and status
-    - [ ] Decide on how content is matched in simkl and plex
+    - [x] Decide on how content is matched in simkl and plex
 - [x] Ask user to setup syncing options
   - [x] Every `x` hrs
 - [x] Open popup in a full tab for the first time
@@ -31,6 +31,6 @@
 
 - [x] UX/UI
 - [ ] Extension uninstall feedback (internal simkl.com) page
-- [ ] (maybe needed) Php code for proxying plex oauth requests
+- [x] (not needed) Php code for proxying plex oauth requests
   - This would get rid of the warning message shown by plex's oauth screen.
-- [ ] Extension icon, name, description
+- [ ] Extension name, description

@@ -531,7 +531,7 @@ const retrySyncWithBackoff = async (
 const startNextSyncTimer = async () => {
   let signal = null;
   if (!!window.timerAbortC) {
-    // TODO(#35): to comibne multiple signals
+    // to comibne multiple signals
     // https://github.com/whatwg/fetch/issues/905#issuecomment-491970649
     window.timerAbortC.abort();
     window.timerAbortC = null;

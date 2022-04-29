@@ -2,8 +2,6 @@
 temp/
 node_modules/
 src/js/background/env.js
-# TODO(#1): remove this
-inspirobot.me/
 dist/
 artifacts/
 *.zip

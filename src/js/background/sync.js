@@ -638,7 +638,7 @@ const startBgSync = async (signal) => {
             }
             break;
           case MediaType.anime:
-            // TODO(#26): handle anime differently
+            // handle anime differently
             // use https://github.com/actsalgueiro/PlexSyncfromSimkl/blob/main/plexsync.py
             // as a reference
             for (let smkAnime of simklChanges[mediaType]) {
@@ -738,7 +738,7 @@ const startBgSync = async (signal) => {
                 case "notinteresting":
                 case "hold":
                 case "plantowatch":
-                  // TODO: see what items are watched
+                  // see what items are watched
                   // and efficiently mark them as watched
                   // i.e. if a whole season is done use season watched plex api method
                   let plexAnimeSeasons = plexSeasonList.map((l) =>
@@ -766,6 +766,7 @@ const startBgSync = async (signal) => {
                   if ("seasons" in smkAnime) {
                     smkAnime.seasons.forEach(async (smkSeason) => {
                       // console.log(`Simkl Season ${smkSeason.number}`);
+                      // TODO: `total` field is not available on backend, this is future proofing
                       if ("total" in smkSeason) {
                         if (smkSeason.total == smkSeason.episodes.length) {
                           await __API__.plex.apis.markSeasonWatched({

@@ -75,7 +75,7 @@ This document describes the development workflow that went into this project.
   - Finished working with the html/css
   - Chrome extension disallows the popup dimensions to exceed `800px x 600px` and the final height was `662px`
   - Made the changes required to get it to `599px`
-    - FIXME(#3): But it still shows a scroll bar - @phanirithvij
+    - FIXED: But it still shows a scroll bar - @phanirithvij
       - @masyk said it's fine if it scrolls because the bottom text which is obscured is not worth re-adjusting the ui for.
 
 ---
@@ -261,7 +261,7 @@ This document describes the development workflow that went into this project.
     - All plex server endpoints also allow cors to the requested origin. i.e. `chrome-extension://<chrome_ext_id>` in our case.
       - plex server returns `Access-Control-Allow-Origin: chrome-extension://<chrome_ext_id>`
     - This calls for not requesting permissions for resources which allow cors.
-      - [ ] TODO(#5): send a request to the provided plex server endpoint
+      - [x] send a request to the provided plex server endpoint
       - If cors is enabled, the don't request permission for that origin.
       - If not, show user an error that the provided plex server has cors disabled. So it is not possible to send requests to it. If this case ever arises then we should use `*://*/*` as an optional host permission and request permissions.
       - [x] Thus following the above permission request for plex origins and related was removed.
@@ -364,9 +364,9 @@ This document describes the development workflow that went into this project.
     - Implemented this, it had an issue with multiline regex using `(?ms)` or something which did not work at all. (refer the script for more comments on this)
     - Tried running the build on github actions on a `windows-latest` runner but it choked and got stuck for 3 hours, not sure what the issue is. But ignore it for now as the build.ps1 script works fine locally and thus serves its purpose.
   - TODO:
-    - [ ] Finish sync the next thing tomorrow
+    - [x] Finish sync the next thing tomorrow
       - [ ] Refactor `sync.js` methods properly
-    - [ ] Prepare a document for general users to beta test the extension.
+    - [x] Prepare a document for general users to beta test the extension.
     - [ ] Add unit tests
       - Maybe unit tests can be included in the beta test for others?
 
@@ -417,7 +417,7 @@ This document describes the development workflow that went into this project.
         - closing all clients
       - Using dev log server instead of using devtools on service worker, because when devtools is open service workers will never get killed by chrome.
         - So to remove this conditional behavior, a dev log server is used to test it.
-    - [ ] Beta testing guide doc.
+    - [x] Beta testing guide doc.
 
 #### Notes (`@phanirithvij`)
 
