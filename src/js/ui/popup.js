@@ -493,6 +493,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // TODOO: move this logic to service worker
 // or else retry logic will only work when a tab is open
+// TODO: Bugreport
+// There is a very high priority bug in this logic
+// opening the browser with plex server not running (reachable)
+// will make the sync retry 6 times and turn off
+// solution: discard this logic altogether and
+// use chrome.alarms in service worker
 const retrySyncWithBackoff = async (
   className = "error-simkl-url-unexpected",
   maxRetries = MaxRetryCount

@@ -321,22 +321,22 @@ const startBgSync = async (signal) => {
       l.filter((item) => item.type == "movie")
     );
     console.log("movies", plexMovieList);
-    const plxEpisodesList = plexMediaList.map((l) =>
+    const plexEpisodesList = plexMediaList.map((l) =>
       l.filter((item) => item.type == "episode")
     );
-    console.log("episodes", plxEpisodesList);
+    console.log("episodes", plexEpisodesList);
     let plexShowList = await getPlexShowList(libraries, pconf);
     console.log("shows", plexShowList);
     let plexSeasonList = await getPlexSeasonsList(libraries, pconf);
     console.log("seasons", plexSeasonList);
 
     // guid look up tables
-    let movieGuidLut = await plexLibraryGuidLut(plexMediaList, pconf);
-    consoledebug(movieGuidLut)();
+    let moviesGuidLut = await plexLibraryGuidLut(plexMediaList, pconf);
+    consoledebug(moviesGuidLut)();
     let showsGuidLut = await plexLibraryGuidLut(plexShowList, pconf);
     consoledebug(showsGuidLut)();
     let episodeSeasonS0mE0nLut = plexLibraryShowS0mE0nLut(
-      plxEpisodesList,
+      plexEpisodesList,
       pconf
     );
     consoledebug(episodeSeasonS0mE0nLut)();
@@ -469,7 +469,7 @@ const startBgSync = async (signal) => {
 
               let mPlexids = simklIdsToPlexIds(smkMovie.movie, mediaType);
               let plexMovie = mPlexids
-                .map((id) => movieGuidLut[id])
+                .map((id) => moviesGuidLut[id])
                 .filter((m) => m);
               if (plexMovie.length > 0) {
                 // consoledebug(
@@ -504,6 +504,7 @@ const startBgSync = async (signal) => {
                   // then we can't know of it.
                   // unless we cache the full history and compare it with user's history everytime
                   // (using `unlimitedStorage` https://developer.chrome.com/docs/extensions/reference/storage/#property)
+                  // `unlimitedStorage` might not be needed as only ids can be stored in chrome.storage.sync
                   break;
               }
             }
@@ -577,7 +578,6 @@ const startBgSync = async (signal) => {
                     // mark all aired seasons as watched
                     plexShowSeasons.forEach((l) => {
                       l.forEach((s) => {
-                        // plxEpisodesList.map((l) => {});
                         __API__.plex.apis.markSeasonWatched({
                           ...pconf,
                           seasonKey: s.ratingKey,
@@ -669,7 +669,7 @@ const startBgSync = async (signal) => {
               if (smkAnime.anime_type === "movie") {
                 // handle anime movies
                 let plexAnimeMovie = mPlexids
-                  .map((id) => movieGuidLut[id])
+                  .map((id) => moviesGuidLut[id])
                   .filter((a) => a);
                 if (plexAnimeMovie.length > 0) {
                   // consoledebug(
@@ -823,6 +823,20 @@ const startBgSync = async (signal) => {
     }
 
     // TODO: plex to simkl sync
+    let { smkAdditions, smkHistory } = prepareSimklSyncAdditons(
+      {
+        plexEpisodesList,
+        plexSeasonList,
+        plexMovieList,
+        plexShowList,
+      },
+      simklChanges
+    );
+    let [response1, response2] = await Promise.all([
+      __API__.simkl.apis.syncItemsToSimklList(simklOauthToken, smkAdditions),
+      __API__.simkl.apis.syncAddItemsToHistory(simklOauthToken, smkHistory),
+    ]);
+    consoledebug(response1, response2)();
 
     syncDone(serverTime);
   } else {
@@ -1077,6 +1091,13 @@ const anidbEpisodeMapping = (anime, episode = 0) => {
     return `imdb://${anime.attributes["imdbid"]}`;
   }
   return null;
+};
+
+const prepareSimklSyncAdditons = (plexLibraryItems, smkLibraryItems) => {
+  let smkAdditions = {},
+    smkHistory = {};
+  consoledebug(plexLibraryItems, smkLibraryItems)();
+  return { smkAdditions, smkHistory };
 };
 
 // unused might required for later
