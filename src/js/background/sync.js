@@ -830,8 +830,11 @@ const startBgSync = async (signal) => {
           plexSeasonList,
           plexMovieList,
           plexShowList,
+          moviesGuidLut,
+          showsGuidLut,
         },
-        simklChanges
+        simklChanges,
+        anidbtvdbIdsLut
       );
     consoledebug(smkAdditions, smkHistory, smkRatings)();
     // let [resp1, resp2, resp3] = await Promise.all([
@@ -1098,31 +1101,83 @@ const anidbEpisodeMapping = (anime, episode = 0) => {
 
 const prepareSimklSyncHistAddandRatings = (
   plexLibraryItems,
-  smkLibraryItems
+  smkLibraryItems,
+  anidbtvdbIdsLut
 ) => {
   consoledebug(plexLibraryItems, smkLibraryItems)();
   let smkAdditions = {},
     smkHistory = {},
     smkRatings = {};
-  let { plexEpisodesList, plexSeasonList, plexMovieList, plexShowList } =
-    plexLibraryItems;
-  let { anime: smkAnime, movies: smkMovies, shows: smkShows } = smkLibraryItems;
+  let {
+    plexMovieList,
+    plexShowList,
+    // plexEpisodesList,
+    // plexSeasonList,
+    moviesGuidLut,
+    showsGuidLut,
+  } = plexLibraryItems;
+  let {
+    anime: smkAnimelist,
+    movies: smkMovies,
+    shows: smkShows,
+  } = smkLibraryItems;
+
+  let smkTempAnimeNShows = smkAnimelist;
+  smkTempAnimeNShows = smkTempAnimeNShows.concat(smkShows);
+
   // Additions (shows|anime, movies)
-  // for (let smkM of smkMovies) {
-  //   consoledebug(smkM)();
-  // }
+  for (let smkMovie of smkMovies) {
+    let mPlexids = simklMovieIdstoPlexIds(smkMovie);
+    let plexMovie = mPlexids.map((id) => moviesGuidLut[id]).filter((m) => m);
+    if (plexMovie.length > 0) {
+      consoledebug("Movie", smkMovie, plexMovie, mPlexids)();
+    }
+  }
+
+  for (let smkShow of smkShows) {
+    let mPlexids = simklShowIdstoPlexIds(smkShow);
+    let plexShow = mPlexids.map((id) => showsGuidLut[id]).filter((s) => s);
+    if (plexShow.length > 0) {
+      consoledebug("Show", smkShow, plexShow, mPlexids)();
+    }
+  }
+
+  for (let smkAnime of smkAnimelist) {
+    let mPlexids = simklAnimeIdstoPlexIds(smkAnime);
+    let anidbId = mPlexids.filter((id) => id.startsWith("anidb://"));
+    if (anidbtvdbIdsLut[anidbId]) {
+      // Anime's anidbid is in lut
+      mPlexids.push(...anidbtvdbIdsLut[anidbId]);
+      // remove duplicate entries
+      mPlexids = [...new Set(mPlexids)];
+    } else {
+    }
+
+    if (smkAnime.anime_type === "movie") {
+      // handle anime movies
+      let plexAnimeMovie = mPlexids
+        .map((id) => moviesGuidLut[id])
+        .filter((a) => a);
+      if (plexAnimeMovie.length > 0) {
+        consoledebug("AniDBTVDBLUT", anidbId, anidbtvdbIdsLut[anidbId])();
+        consoledebug("AnimeMovie", smkAnime, plexAnimeMovie, mPlexids)();
+      }
+      continue;
+    }
+    let plexAnime = mPlexids.map((id) => showsGuidLut[id]).filter((a) => a);
+    if (plexAnime.length > 0) {
+      consoledebug("AniDBTVDBLUT", anidbId, anidbtvdbIdsLut[anidbId])();
+      consoledebug("Anime", smkAnime, plexAnime, mPlexids)();
+    }
+  }
   // for (let library of plexMovieList) {
   //   for (let item of library) {
-  //     consoledebug("library:", library, "item:", item)();
-  //     break;
+  //     consoledebug("item:", item)();
   //   }
   // }
-
   // History (shows|anime/seasons/episodes, movies)
 
   // Ratings (shows|anime, movies)
-  let tempAnimeandShows = smkAnime;
-  tempAnimeandShows = tempAnimeandShows.concat(smkShows);
   return { smkAdditions, smkHistory, smkRatings };
 };
 

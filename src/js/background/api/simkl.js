@@ -70,6 +70,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       if (resp.status === 200) {
         return await resp.json();
       }
+      return await resp.json();
     } catch (error) {
       broadcastOnlineStatus(false);
       return { error: "offline" };
@@ -100,8 +101,9 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       consoledebug("Simkl access_token response:", response)();
       if ("error" in response) {
         // failed to authenticate the user
-        // TODO(#16): this might be because code expired
+        // this might be because code expired
         // it stayed in the local storage for too long
+        chrome.storage.local.remove("simklPinCode");
         responseChannel(makeErrorResponse(response));
         return;
       }
@@ -115,6 +117,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
         );
         return;
       }
+      chrome.storage.local.remove("simklPinCode");
       responseChannel(makeErrorResponse(response));
       return;
     }

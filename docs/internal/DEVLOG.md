@@ -438,3 +438,6 @@ This document describes the development workflow that went into this project.
     ```json
       "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs5UgzBFazS+AO+RJV5f7OaKe9wYM5d6Ozjw7TkHEvgDDHyUmI23dVSF18dR96bX7JgY2Weh9wSDyz26JqgnUBvD4zUKrpURadira3vdvD0Hft3RlCc+GE53dlXFiugbDLzWIB+TmqxlF0N1sBbodyU7oc4FXz4nP0buR/PzqVrBE1hh1wfR9X7HBwN2RJf1bT5QRYQYGLZr3KxofwPLRMPLqCphAjmP1mzL+wiwxrCjBFQLGHQs/Ki0R2DL+RxCeK3fufDyIx6xmrjRHeuCL70asfUjfGU0ehsZgT3sO+4DKtoo2JaK7j1owuywqrlHkAuZ8IUVI5JiM0k4Lyp3cTwIDAQAB",
     ```
+- Tvdb urls by ids can be obtained by `https://www.thetvdb.com/dereferrer/series/295759` [source](https://forums.thetvdb.com/viewtopic.php?t=65005)
+  - Archive using https://github.com/wabarc/wayback
+    - Or their telegram bot http://t.me/wabarc_bot
