@@ -823,20 +823,23 @@ const startBgSync = async (signal) => {
     }
 
     // TODO: plex to simkl sync
-    let { smkAdditions, smkHistory } = prepareSimklSyncAdditons(
-      {
-        plexEpisodesList,
-        plexSeasonList,
-        plexMovieList,
-        plexShowList,
-      },
-      simklChanges
-    );
-    let [response1, response2] = await Promise.all([
-      __API__.simkl.apis.syncItemsToSimklList(simklOauthToken, smkAdditions),
-      __API__.simkl.apis.syncAddItemsToHistory(simklOauthToken, smkHistory),
-    ]);
-    consoledebug(response1, response2)();
+    let { smkAdditions, smkHistory, smkRatings } =
+      prepareSimklSyncHistAddandRatings(
+        {
+          plexEpisodesList,
+          plexSeasonList,
+          plexMovieList,
+          plexShowList,
+        },
+        simklChanges
+      );
+    consoledebug(smkAdditions, smkHistory, smkRatings)();
+    // let [resp1, resp2, resp3] = await Promise.all([
+    //   __API__.simkl.apis.syncItemsToSimklList(simklOauthToken, smkAdditions),
+    //   __API__.simkl.apis.syncAddItemsToHistory(simklOauthToken, smkHistory),
+    //   __API__.simkl.apis.syncAddItemRatings(simklOauthToken, smkRatings),
+    // ]);
+    // consoledebug(resp1, resp2, resp3)();
 
     syncDone(serverTime);
   } else {
@@ -1093,11 +1096,34 @@ const anidbEpisodeMapping = (anime, episode = 0) => {
   return null;
 };
 
-const prepareSimklSyncAdditons = (plexLibraryItems, smkLibraryItems) => {
-  let smkAdditions = {},
-    smkHistory = {};
+const prepareSimklSyncHistAddandRatings = (
+  plexLibraryItems,
+  smkLibraryItems
+) => {
   consoledebug(plexLibraryItems, smkLibraryItems)();
-  return { smkAdditions, smkHistory };
+  let smkAdditions = {},
+    smkHistory = {},
+    smkRatings = {};
+  let { plexEpisodesList, plexSeasonList, plexMovieList, plexShowList } =
+    plexLibraryItems;
+  let { anime: smkAnime, movies: smkMovies, shows: smkShows } = smkLibraryItems;
+  // Additions (shows|anime, movies)
+  // for (let smkM of smkMovies) {
+  //   consoledebug(smkM)();
+  // }
+  // for (let library of plexMovieList) {
+  //   for (let item of library) {
+  //     consoledebug("library:", library, "item:", item)();
+  //     break;
+  //   }
+  // }
+
+  // History (shows|anime/seasons/episodes, movies)
+
+  // Ratings (shows|anime, movies)
+  let tempAnimeandShows = smkAnime;
+  tempAnimeandShows = tempAnimeandShows.concat(smkShows);
+  return { smkAdditions, smkHistory, smkRatings };
 };
 
 // unused might required for later

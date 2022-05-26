@@ -277,7 +277,6 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   const syncItemsToSimklList = async (token, items) => {
-    // TODO
     // items should be of the form
     /*
       https://simkl.docs.apiary.io/#reference/sync/remove-ratings/add-items-to-specific-list
@@ -319,9 +318,30 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   };
 
   const syncAddItemsToHistory = async (token, items) => {
-    // TODO
     try {
       let resp = await fetch(`${SimklAPIDomain}/sync/history`, {
+        method: "POST",
+        body: JSON.stringify(items),
+        headers: {
+          "Content-Type": "application/json",
+          "simkl-api-key": SimklClientID,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      broadcastOnlineStatus();
+      if (resp.status == 200) {
+        return await resp.json();
+      }
+    } catch (error) {
+      broadcastOnlineStatus(false);
+      return null;
+    }
+  };
+
+  const syncAddItemRatings = async (token, items) => {
+    // only {"movies": [], "shows": []}
+    try {
+      let resp = await fetch(`${SimklAPIDomain}/sync/ratings`, {
         method: "POST",
         body: JSON.stringify(items),
         headers: {
@@ -368,5 +388,6 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   __API__.simkl.apis.getMediaById = getMediaById;
   __API__.simkl.apis.syncItemsToSimklList = syncItemsToSimklList;
   __API__.simkl.apis.syncAddItemsToHistory = syncAddItemsToHistory;
+  __API__.simkl.apis.syncAddItemRatings = syncAddItemRatings;
   __API__.simkl.apis.getShowEpisodeList = getShowEpisodeList;
 })();

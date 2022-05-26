@@ -503,6 +503,12 @@ const retrySyncWithBackoff = async (
   className = "error-simkl-url-unexpected",
   maxRetries = MaxRetryCount
 ) => {
+  // TODOOO: disabling this for now
+  // remove these 3 lines later and rewrite the logic
+  // in the service worker
+  uiSyncDisabled();
+  stopLibrarySync();
+  return;
   document.body.classList.add(className);
   let { failedTries } = await chrome.storage.local.get({ failedTries: 1 });
   consoledebug(

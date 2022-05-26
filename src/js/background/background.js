@@ -59,6 +59,7 @@ let __API__ = {
       getMediaById: f,
       syncItemsToSimklList: f,
       syncAddItemsToHistory: f,
+      syncAddItemRatings: f,
       getShowEpisodeList: f,
     },
   },
