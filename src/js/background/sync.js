@@ -331,7 +331,7 @@ const startBgSync = async (signal) => {
     console.log("seasons", plexSeasonList);
 
     // guid look up tables
-    let moviesGuidLut = await plexLibraryGuidLut(plexMediaList, pconf);
+    let moviesGuidLut = await plexLibraryGuidLut(plexMovieList, pconf);
     consoledebug(moviesGuidLut)();
     let showsGuidLut = await plexLibraryGuidLut(plexShowList, pconf);
     consoledebug(showsGuidLut)();
@@ -411,6 +411,10 @@ const startBgSync = async (signal) => {
     consoledebug(dates)();
 
     // get simkl history
+    const timeoutId = setTimeout(
+      () => self.aController.abort(),
+      SimklAllItemsFetchTimeoutDuration
+    );
     let {
       success,
       data: simklChanges,
@@ -424,6 +428,7 @@ const startBgSync = async (signal) => {
       null,
       signal
     );
+    clearTimeout(timeoutId);
     if (!success) {
       if (err instanceof DOMException) {
         consoledebug("User canceled sync")();
@@ -1105,7 +1110,10 @@ const prepareSimklSyncHistAddandRatings = (
   anidbtvdbIdsLut
 ) => {
   consoledebug(plexLibraryItems, smkLibraryItems)();
-  let smkAdditions = {},
+  let smkAdditions = {
+      movies: [],
+      shows: [],
+    },
     smkHistory = {},
     smkRatings = {};
   let {
@@ -1113,8 +1121,8 @@ const prepareSimklSyncHistAddandRatings = (
     plexShowList,
     // plexEpisodesList,
     // plexSeasonList,
-    moviesGuidLut,
-    showsGuidLut,
+    moviesGuidLut: plexMoviesGuidLut,
+    showsGuidLut: plexShowsGuidLut,
   } = plexLibraryItems;
   let {
     anime: smkAnimelist,
@@ -1125,24 +1133,23 @@ const prepareSimklSyncHistAddandRatings = (
   let smkTempAnimeNShows = smkAnimelist;
   smkTempAnimeNShows = smkTempAnimeNShows.concat(smkShows);
 
+  let simklMoviesLut = {},
+    simklShowsLut = {};
+
   // Additions (shows|anime, movies)
-  for (let smkMovie of smkMovies) {
+  smkMovies.forEach((smkMovie) => {
     let mPlexids = simklMovieIdstoPlexIds(smkMovie);
-    let plexMovie = mPlexids.map((id) => moviesGuidLut[id]).filter((m) => m);
-    if (plexMovie.length > 0) {
-      consoledebug("Movie", smkMovie, plexMovie, mPlexids)();
-    }
-  }
-
-  for (let smkShow of smkShows) {
+    mPlexids.forEach((id) => {
+      simklMoviesLut[id] = smkMovie;
+    });
+  });
+  smkShows.forEach((smkShow) => {
     let mPlexids = simklShowIdstoPlexIds(smkShow);
-    let plexShow = mPlexids.map((id) => showsGuidLut[id]).filter((s) => s);
-    if (plexShow.length > 0) {
-      consoledebug("Show", smkShow, plexShow, mPlexids)();
-    }
-  }
-
-  for (let smkAnime of smkAnimelist) {
+    mPlexids.forEach((id) => {
+      simklShowsLut[id] = smkShow;
+    });
+  });
+  smkAnimelist.forEach((smkAnime) => {
     let mPlexids = simklAnimeIdstoPlexIds(smkAnime);
     let anidbId = mPlexids.filter((id) => id.startsWith("anidb://"));
     if (anidbtvdbIdsLut[anidbId]) {
@@ -1150,32 +1157,88 @@ const prepareSimklSyncHistAddandRatings = (
       mPlexids.push(...anidbtvdbIdsLut[anidbId]);
       // remove duplicate entries
       mPlexids = [...new Set(mPlexids)];
-    } else {
     }
+    mPlexids.forEach((id) => {
+      smkAnime.anime_type === "movie"
+        ? (simklMoviesLut[id] = smkAnime)
+        : (simklShowsLut[id] = smkAnime);
+    });
+  });
 
-    if (smkAnime.anime_type === "movie") {
-      // handle anime movies
-      let plexAnimeMovie = mPlexids
-        .map((id) => moviesGuidLut[id])
-        .filter((a) => a);
-      if (plexAnimeMovie.length > 0) {
-        consoledebug("AniDBTVDBLUT", anidbId, anidbtvdbIdsLut[anidbId])();
-        consoledebug("AnimeMovie", smkAnime, plexAnimeMovie, mPlexids)();
+  let plxAddedMoviesMap = {};
+  Object.entries(plexMoviesGuidLut).forEach(([id, plxMovie]) => {
+    if (id in simklMoviesLut) {
+      consoledebug([id, plxMovie, simklMoviesLut[id]])();
+    } else {
+      let parts = id.split("://");
+      if (plxMovie.guid in plxAddedMoviesMap) {
+        plxAddedMoviesMap[plxMovie.guid].ids[parts[0]] = parts[1];
+      } else {
+        let details = {
+          title: plxMovie.title,
+          year: plxMovie.year,
+          to: "viewCount" in plxMovie ? "completed" : "plantowatch",
+          ids: {
+            [parts[0]]: parts[1],
+          },
+        };
+        if ("lastViewedAt" in plxMovie)
+          details["watched_at"] = new Date(
+            plxMovie.lastViewedAt * 1000
+          ).toISOString();
+        plxAddedMoviesMap[plxMovie.guid] = details;
       }
-      continue;
+      // consoledebug([id, plxMovie])();
     }
-    let plexAnime = mPlexids.map((id) => showsGuidLut[id]).filter((a) => a);
-    if (plexAnime.length > 0) {
-      consoledebug("AniDBTVDBLUT", anidbId, anidbtvdbIdsLut[anidbId])();
-      consoledebug("Anime", smkAnime, plexAnime, mPlexids)();
+  });
+  smkAdditions.movies = Object.values(plxAddedMoviesMap);
+
+  let plxAddedShowsMap = {};
+  Object.entries(plexShowsGuidLut).forEach(([id, plxShow]) => {
+    if (id in simklShowsLut) {
+      consoledebug([id, plxShow, simklShowsLut[id]])();
+    } else {
+      let parts = id.split("://");
+      if (plxShow.guid in plxAddedShowsMap) {
+        plxAddedShowsMap[plxShow.guid].ids[parts[0]] = parts[1];
+      } else {
+        let details = {
+          title: plxShow.title,
+          year: plxShow.year,
+          to: "viewCount" in plxShow ? "completed" : "plantowatch",
+          ids: {
+            [parts[0]]: parts[1],
+          },
+        };
+        if ("lastViewedAt" in plxShow)
+          details["watched_at"] = new Date(
+            plxShow.lastViewedAt * 1000
+          ).toISOString();
+        plxAddedShowsMap[plxShow.guid] = details;
+      }
+      // consoledebug([id, plxShow])();
     }
-  }
-  // for (let library of plexMovieList) {
-  //   for (let item of library) {
+  });
+
+  // consoledebug("--------------- Movies: ---------------")();
+  // plexMovieList.forEach((library) => {
+  //   consoledebug("--------------- library: ", "---------------", library)();
+  //   library.forEach((item) => {
+  //     let ids = [];
+  //     if (!!item.Guid) ids.push(...item.Guid.map((x) => x.id));
+  //     if (!!item.guid) ids.push(...item.Guid.map((x) => x.id));
   //     consoledebug("item:", item)();
-  //   }
-  // }
-  // History (shows|anime/seasons/episodes, movies)
+  //   });
+  // });
+  // consoledebug("--------------- Shows: ---------------")();
+  // plexShowList.forEach((library) => {
+  //   consoledebug("--------------- library: ", "---------------", library)();
+  //   library.forEach((item) => {
+  //     consoledebug("item:", item)();
+  //   });
+  // });
+
+  // History ((shows|anime)/seasons/episodes, movies)
 
   // Ratings (shows|anime, movies)
   return { smkAdditions, smkHistory, smkRatings };

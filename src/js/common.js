@@ -4,6 +4,7 @@ const DefaultSyncPeriod = 12;
 const MaxRetryCount = 6;
 const AlarmKey = "plex-libray-sync";
 const FetchTimeoutDuration = 10 * 1000;
+const SimklAllItemsFetchTimeoutDuration = 20 * 1000;
 const ServiceWorkerPingTimeout = 5 * 1000;
 const ServiceWorkerPingInterval = 20 * 1000;
 const BackoffMaxLimit = 10 * 1000;

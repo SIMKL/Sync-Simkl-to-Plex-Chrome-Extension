@@ -14,6 +14,11 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     chrome.runtime.sendMessage(message);
   };
 
+  const throwError = (err) => {
+    // consoleerror(err)();
+    throw err;
+  };
+
   const checkTokenValiditiy = async (responseChannel, token) => {
     responseChannel =
       responseChannel ||
@@ -58,6 +63,8 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
         redirect_uri: SimklRedirectURI,
         grant_type: "authorization_code",
       };
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(`${SimklAPIDomain}/oauth/token`, {
         method: "POST",
         headers: {
@@ -65,8 +72,10 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify(req),
-      });
+        signal: ac.signal,
+      }).catch(throwError);
       broadcastOnlineStatus();
+      clearTimeout(timeoutId);
       if (resp.status === 200) {
         return await resp.json();
       }
@@ -94,7 +103,6 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       simklPinCode: null,
     });
     consoledebug("localStorage:", { simklPinCode })();
-
     if (!!simklPinCode) {
       // after redirect step
       let response = await getAuthToken(simklPinCode);
@@ -164,9 +172,7 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
               },
               signal,
             }
-          ).catch((err) => {
-            throw err;
-          })
+          ).catch(throwError)
         )
       );
       broadcastOnlineStatus();
@@ -212,14 +218,19 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 
   const getLastActivity = async (token, responseChannel = null) => {
     try {
+      const ac = new AbortController();
+      // consoledebug("-----------", FetchTimeoutDuration)();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(`${SimklAPIDomain}/sync/activities`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
           "simkl-api-key": SimklClientID,
         },
-      });
+        signal: ac.signal,
+      }).catch(throwError);
       broadcastOnlineStatus();
+      clearTimeout(timeoutId);
       if (resp.status == 200) {
         let data = await resp.json();
         !!responseChannel && responseChannel(makeSuccessResponse(data));
@@ -230,20 +241,25 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
       return { valid: false, info: data, status: resp.status };
     } catch (error) {
       broadcastOnlineStatus(false);
+      // TODO: can be offline, or timeout
       return { valid: false, info: null, error: "offline" };
     }
   };
 
   const getUserInfo = async (token) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(`${SimklAPIDomain}/users/settings`, {
         headers: {
           "Content-Type": "application/json",
           "simkl-api-key": SimklClientID,
           Authorization: `Bearer ${token}`,
         },
-      });
+        signal: ac.signal,
+      }).catch(throwError);
       broadcastOnlineStatus();
+      clearTimeout(timeoutId);
       if (resp.status == 200) {
         return await resp.json();
       }
@@ -256,6 +272,8 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   const getMediaById = async (token, mPlexids) => {
     // TODO
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(
         `${SimklAPIDomain}/search/id?` +
           stringify({
@@ -267,9 +285,11 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
             "simkl-api-key": SimklClientID,
             Authorization: `Bearer ${token}`,
           },
+          signal: ac.signal,
         }
-      );
+      ).catch(throwError);
       broadcastOnlineStatus();
+      clearTimeout(timeoutId);
       if (resp.status == 200) {
         return await resp.json();
       }
@@ -301,6 +321,8 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
     */
 
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(`${SimklAPIDomain}/sync/add-to-list`, {
         method: "POST",
         headers: {
@@ -309,8 +331,10 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(items),
-      });
+        signal: ac.signal,
+      }).catch(throwError);
       broadcastOnlineStatus();
+      clearTimeout(timeoutId);
       if (resp.status == 200) {
         return await resp.json();
       }
@@ -322,6 +346,8 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 
   const syncAddItemsToHistory = async (token, items) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(`${SimklAPIDomain}/sync/history`, {
         method: "POST",
         body: JSON.stringify(items),
@@ -330,8 +356,10 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
           "simkl-api-key": SimklClientID,
           Authorization: `Bearer ${token}`,
         },
-      });
+        signal: ac.signal,
+      }).catch(throwError);
       broadcastOnlineStatus();
+      clearTimeout(timeoutId);
       if (resp.status == 200) {
         return await resp.json();
       }
@@ -344,6 +372,8 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
   const syncAddItemRatings = async (token, items) => {
     // only {"movies": [], "shows": []}
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(`${SimklAPIDomain}/sync/ratings`, {
         method: "POST",
         body: JSON.stringify(items),
@@ -352,8 +382,10 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
           "simkl-api-key": SimklClientID,
           Authorization: `Bearer ${token}`,
         },
-      });
+        signal: ac.signal,
+      }).catch(throwError);
       broadcastOnlineStatus();
+      clearTimeout(timeoutId);
       if (resp.status == 200) {
         return await resp.json();
       }
@@ -365,14 +397,18 @@ const SimklRedirectURI = `${HttpCrxRedirectStub}/popup.html#simkl-oauth`;
 
   const getShowEpisodeList = async (token, showID) => {
     try {
+      const ac = new AbortController();
+      const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       let resp = await fetch(`${SimklAPIDomain}/tv/episodes/${showID}`, {
         headers: {
           "Content-Type": "application/json",
           "simkl-api-key": SimklClientID,
           Authorization: `Bearer ${token}`,
         },
-      });
+        signal: ac.signal,
+      }).catch(throwError);
       broadcastOnlineStatus();
+      clearTimeout(timeoutId);
       if (resp.status == 200) {
         return await resp.json();
       }

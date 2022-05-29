@@ -33,7 +33,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   };
 
   const throwError = (err) => {
-    // consoleerror(err)();
+    consoleerror(err)();
     throw err;
   };
 
@@ -76,7 +76,6 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
     }
     try {
       const ac = new AbortController();
-      // 5 second timeout:
       const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       // consoledebug("SW: fetch user info from plex.tv")();
       let resp = await fetch(
@@ -107,7 +106,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           makeErrorResponse({
             authToken: null,
             valid: false,
-            error: error,
+            error,
             message: "Invalid JSON response received",
             status: resp.status,
           })
@@ -135,7 +134,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
         makeErrorResponse({
           authToken: null,
           valid: false,
-          error: error,
+          error,
           message: "Couldn't connect to plex.tv",
         })
       );
@@ -206,7 +205,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       broadcastOnlineStatus(false);
       return {
         message: "Couldn't connect to plex.tv",
-        error: error,
+        error,
       };
     }
   };
@@ -364,7 +363,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           return { error: "unexpected", libraries: null };
         } catch (error) {
           // invalid json response
-          return { error: error, libraries: null };
+          return { error, libraries: null };
         }
       }
       return { error: resp.statusText, libraries: null, status: resp.status };
@@ -427,7 +426,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
           return { error: "unexpected", items: null };
         } catch (error) {
           // invalid json response
-          return { error: error, items: null };
+          return { error, items: null };
         }
       }
       // sync-error
@@ -936,7 +935,6 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
   const refreshLibrary = async ({ plexToken, plexApiBaseURL, sectionKey }) => {
     try {
       const ac = new AbortController();
-      // 5 second timeout:
       const timeoutId = setTimeout(() => ac.abort(), FetchTimeoutDuration);
       // consoledebug("SW: fetch user info from plex.tv")();
       let resp = await fetch(
