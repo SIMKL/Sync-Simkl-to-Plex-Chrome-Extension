@@ -38,8 +38,8 @@
   "devDependencies": {
     "exitzero": "^1.0.1",
     "node-qunit-puppeteer": "2.1.0",
-    "puppeteer": "^13.4.1",
+    "puppeteer": "^13.7.0",
     "run-script-os": "^1.1.6",
-    "web-ext": "^6.7.0"
+    "web-ext": "^6.8.0"
   }
 }
