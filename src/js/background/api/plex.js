@@ -228,7 +228,7 @@ const PlexRedirectURI = `${HttpCrxRedirectStub}/popup.html#plex-oauth`;
       // oauth second step (after redirect)
       resp["code"] = plexPinCode;
       resp["id"] = plexPinID;
-      chrome.storage.local.remove("plexPinCode", "plexPinID");
+      chrome.storage.local.remove(["plexPinCode", "plexPinID"]);
       let response = await getAuthToken(resp["id"], resp["code"]);
       if (response == null) {
         return;
