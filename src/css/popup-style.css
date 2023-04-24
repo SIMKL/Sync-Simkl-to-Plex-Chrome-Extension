@@ -147,6 +147,12 @@ sync,sync * {
 		content: '' !important;
 	}
 	
+	body.custom-sync-period sync-buttons {
+		max-width: 330px;
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+	}
 	sync-buttons-button {
 		font-weight: bold;
 		width: 218px;
@@ -158,6 +164,9 @@ sync,sync * {
 		transition: transform .2s;
 		border: transparent 2px solid;
 
+	}
+	body.custom-sync-period sync-buttons-button {
+		width: 130px;
 	}
 	sync-buttons-button:hover {
 		filter: brightness(1.2);
@@ -180,6 +189,9 @@ sync,sync * {
 		background-color: var(--plex-color);
 		color: var(--white-color);
 	}
+	body.custom-sync-period sync-buttons-button.Plex {
+		margin-bottom: 20px !important;
+	}
 	.connected-plex sync-buttons-button.Plex {
 		border: var(--plex-color) 2px solid;
 		background-color: transparent;
@@ -187,6 +199,9 @@ sync,sync * {
 	}
 	sync-buttons-button.Simkl::before {
 		content: var(--text-btn-connect-simkl);
+	}
+	body.custom-sync-period sync-buttons-button.Simkl::before {
+		font-size: 1rem;
 	}
 	.connected-simkl sync-buttons-button.Simkl::before {
 		content: var(--text-btn-connected-simkl);
@@ -196,6 +211,9 @@ sync,sync * {
 	}
 	sync-buttons-button.Plex::before {
 		content: var(--text-btn-connect-plex);
+	}
+	body.custom-sync-period sync-buttons-button.Plex::before {
+		font-size: 1rem;
 	}
 	.connected-plex sync-buttons-button.Plex::before {
 		content: var(--text-btn-connected-plex);
@@ -224,6 +242,9 @@ sync,sync * {
 	body.error-plex-url-unexpected sync-form {
 		height: 280px;
 	}
+/* 	body.custom-sync-period sync-form {
+		height: 290px;
+	} */
 	/* https://stackoverflow.com/a/50546888 */
 	body:not(.connected-simkl) sync-form {
 		opacity: 0;
@@ -276,6 +297,9 @@ sync,sync * {
 		border-radius: 6px;
 		margin-bottom: 20px;
 	}
+	body.custom-sync-period sync-form-plex-url input {
+		margin-bottom: 10px;
+	}
 	sync-form-select-time {
 		width: var(--form-width);
 	}
@@ -286,7 +310,7 @@ sync,sync * {
 	sync-form-select-time select {
 		width: var(--form-width);
 		font-size: 20px;
-		padding: 9px;;
+		padding: 9px;
 		border-radius: 6px;
 		text-align: center;
 		text-align-last: center;
@@ -294,8 +318,25 @@ sync,sync * {
 		text-align-last: center;
 		flex-direction: row;
 	}
+	body.custom-sync-period sync-form-custom-time {
+		margin-top: 10px;
+		flex-direction: row;
+		justify-content: space-around;
+		width: var(--form-width);
+	}
+	body:not(.custom-sync-period) sync-form-custom-time {
+		display: none;
+		visibility: hidden;
+	}
+	sync-form-custom-time input {
+		width: 90px;
+		text-align: center;
+		font-size: 20px;
+		padding: 9px 0;
+		border-radius: 6px;
+	}
 	sync-form-button {
-		margin-top: 22px;
+		margin-top: 8px;
 		width: 100%;
 		max-width: var(--form-width);
 		color: var(--white-color);

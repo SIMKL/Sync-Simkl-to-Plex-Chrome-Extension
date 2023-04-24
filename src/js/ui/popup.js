@@ -188,6 +188,9 @@ const onLoad = async () => {
   const syncBtn = document.querySelector("sync-form-button");
   const urlInput = document.querySelector("sync-form-plex-url>input");
   const durationInput = document.querySelector("sync-form-select-time>select");
+  const customDurationInput = document.querySelector(
+    "sync-form-custom-time>input"
+  );
   const syncNowBtn = document.querySelector("sync-desc-line-2");
 
   plexBtn.addEventListener("click", async (_) => {
@@ -217,11 +220,39 @@ const onLoad = async () => {
     debounce(() => validateInputUrl(urlInput.value))
   );
   durationInput.addEventListener("change", async (_) => {
+    if (durationInput.value == CustomSyncPeriodTag) {
+      document.body.classList.add("custom-sync-period");
+      customDurationInput.value = (
+        await chrome.storage.local.get({
+          customSyncPeriod: DefaultSyncPeriod,
+        })
+      ).customSyncPeriod;
+      chrome.storage.local.set({
+        syncPeriod: durationInput.value,
+        customSyncPeriod: customDurationInput.value,
+      });
+      if (await isSyncEnabled()) {
+        restartLibrarySync(customDurationInput.value, false);
+        startNextSyncTimer();
+      }
+      return;
+    }
+    document.body.classList.remove("custom-sync-period");
     chrome.storage.local.set({
       syncPeriod: durationInput.value,
     });
     if (await isSyncEnabled()) {
       restartLibrarySync(durationInput.value, false);
+      startNextSyncTimer();
+    }
+  });
+  customDurationInput.addEventListener("change", async (_) => {
+    chrome.storage.local.set({
+      syncPeriod: durationInput.value,
+      customSyncPeriod: customDurationInput.value,
+    });
+    if (await isSyncEnabled()) {
+      restartLibrarySync(customDurationInput.value, false);
       startNextSyncTimer();
     }
   });
@@ -236,6 +267,7 @@ const onLoad = async () => {
       await chrome.storage.local.set({
         plexInstanceUrl: normalizedUrl,
         syncPeriod: durationInput.value,
+        customSyncPeriod: customDurationInput.value,
       });
       if (await isSyncEnabled()) {
         // sync enabled; stop it
@@ -246,7 +278,11 @@ const onLoad = async () => {
         // https://stackoverflow.com/q/27669590
         uiSyncEnabled();
         // TODO(#32): remove the sync-errors
-        startLibrarySync(durationInput.value);
+        startLibrarySync(
+          durationInput.value == CustomSyncPeriodTag
+            ? customDurationInput.value
+            : durationInput.value
+        );
         uiBroadcastSyncState(true);
         await chrome.storage.local.set({
           doFullSync: true,
@@ -273,10 +309,12 @@ const onLoad = async () => {
   handleHashRoutes();
   // load settings from local storage and update UI
   (async () => {
-    let { plexInstanceUrl, syncPeriod } = await chrome.storage.local.get({
-      plexInstanceUrl: null,
-      syncPeriod: DefaultSyncPeriod,
-    });
+    let { plexInstanceUrl, syncPeriod, customSyncPeriod } =
+      await chrome.storage.local.get({
+        plexInstanceUrl: null,
+        syncPeriod: DefaultSyncPeriod,
+        customSyncPeriod: DefaultSyncPeriod,
+      });
     if (!!plexInstanceUrl) {
       urlInput.value = plexInstanceUrl;
       validateInputUrl(urlInput.value);
@@ -284,6 +322,10 @@ const onLoad = async () => {
     }
     if (!!syncPeriod) {
       durationInput.value = syncPeriod;
+    }
+    if (syncPeriod == CustomSyncPeriodTag && customSyncPeriod) {
+      document.body.classList.add("custom-sync-period");
+      customDurationInput.value = customSyncPeriod;
     }
     if (await isSyncEnabled()) {
       uiSyncEnabled();
@@ -500,10 +542,12 @@ const retrySyncWithBackoff = async (
     return;
   }
   let backOffmult = Math.min(Math.pow(2, failedTries), 30);
+  let { syncPeriod, customSyncPeriod } = await chrome.storage.local.get({
+    syncPeriod: DefaultSyncPeriod,
+    customSyncPeriod: DefaultSyncPeriod,
+  });
   restartLibrarySync(
-    (await chrome.storage.local.get({ syncPeriod: DefaultSyncPeriod }))[
-      "syncPeriod"
-    ],
+    syncPeriod == CustomSyncPeriodTag ? customSyncPeriod : syncPeriod,
     false,
     backOffmult * 1000 || BackoffMaxLimit
   );
@@ -524,10 +568,14 @@ const startNextSyncTimer = async () => {
   }
   window.timerAbortC = new AbortController();
   signal = window.timerAbortC.signal;
-  let { lastSynced, syncPeriod } = await chrome.storage.local.get({
-    lastSynced: null,
-    syncPeriod: DefaultSyncPeriod,
-  });
+  let { lastSynced, syncPeriod, customSyncPeriod } =
+    await chrome.storage.local.get({
+      lastSynced: null,
+      syncPeriod: DefaultSyncPeriod,
+      customSyncPeriod: DefaultSyncPeriod,
+    });
+  syncPeriod =
+    syncPeriod == CustomSyncPeriodTag ? customSyncPeriod : syncPeriod;
   let now = () => new Date();
   let lastSyncedTime = new Date(lastSynced);
   let scheduledSyncTime = new Date(
@@ -544,7 +592,11 @@ const startNextSyncTimer = async () => {
     });
   }
   consoledebug("Timer times", now(), lastSyncedTime, scheduledSyncTime)();
-  consoledebug("Timer conditions", now() > lastSyncedTime, now() < scheduledSyncTime)();
+  consoledebug(
+    "Timer conditions",
+    now() > lastSyncedTime,
+    now() < scheduledSyncTime
+  )();
   if (now() > lastSyncedTime && now() < scheduledSyncTime) {
     document.body.classList.add("sync-waiting-for-next-sync");
     let totSecs = parseInt(syncPeriod) * 60 * 60;
