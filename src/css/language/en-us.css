@@ -24,7 +24,7 @@ body {
 	--text-form-button-no-plex: "ERROR: NO PLEX";
 	--text-form-button-disable: "Disable sync";
 	--text-footer-desc: "The extension will start syncing all watched items from your Simkl watch lists to Plex";
-	--text-footer-desc-enabled: "The extension is currently syncing new watched items from your Simkl watch lists";
+	--text-footer-desc-enabled: "The extension is will sync new watched items from your Simkl watch lists periodically";
 
 
 	--text-error-plex-url: "Please insert a correct Plex URL to your server. Example: http://yourplexserverip:32400";
