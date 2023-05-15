@@ -2,7 +2,7 @@
 
 const DefaultSyncPeriod = 12;
 const CustomSyncPeriodTag = "custom";
-const MaxRetryCount = 6;
+const MaxRetryCount = 3;
 const AlarmKey = "plex-libray-sync";
 const ServiceWorkerPingTimeout = 5 * 1000;
 const ServiceWorkerPingInterval = 20 * 1000;
