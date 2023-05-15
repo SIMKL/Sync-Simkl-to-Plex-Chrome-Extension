@@ -1,5 +1,7 @@
 body {
 	min-width: 310px;
+	max-height: fit-content;
+	margin: 4px;
 }
 
 html:not(.popupview) body {
@@ -29,6 +31,10 @@ html:not(.popupview) body {
 
 html.popupview sync-desc-line-1 {
 	font-size: 17px;
+}
+
+html.popupview sync-buttons {
+	width: 102%;
 }
 
 sync,sync * {
@@ -155,6 +161,8 @@ sync,sync * {
 	}
 	sync-buttons-button {
 		font-weight: bold;
+		/* width: 162px; */
+		/* width: 294px; */
 		width: 218px;
 		border-radius: 25px;
 		padding: 14px;
@@ -166,7 +174,7 @@ sync,sync * {
 
 	}
 	body.custom-sync-period sync-buttons-button {
-		width: 130px;
+		width: 129px;
 	}
 	sync-buttons-button:hover {
 		filter: brightness(1.2);
@@ -298,7 +306,10 @@ sync,sync * {
 		margin-bottom: 20px;
 	}
 	body.custom-sync-period sync-form-plex-url input {
-		margin-bottom: 10px;
+		margin-bottom: 24px;
+	}
+	body.custom-sync-period sync-footer-desc::before {
+		padding-top: 24px;
 	}
 	sync-form-select-time {
 		width: var(--form-width);
