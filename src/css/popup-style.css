@@ -170,8 +170,8 @@ sync,sync * {
 		margin-bottom: 20px;
 		cursor: pointer;
 		transition: transform .2s;
+		-webkit-transition: transform .2s;
 		border: transparent 2px solid;
-
 	}
 	body.custom-sync-period sync-buttons-button {
 		width: 129px;
@@ -334,6 +334,12 @@ sync,sync * {
 		flex-direction: row;
 		justify-content: space-around;
 		width: var(--form-width);
+
+		/* Animation */
+		opacity: 0;
+		transform: translateX(30%);
+		transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+		animation: slide-in 0.3s ease-in-out forwards;
 	}
 	body:not(.custom-sync-period) sync-form-custom-time {
 		display: none;
@@ -401,3 +407,14 @@ sync,sync * {
 	.sync-enabled:not(.sync-error) sync-footer-desc::before {
 		content: var(--text-footer-desc-enabled);
 	}
+
+@keyframes slide-in {
+	0% {
+		opacity: 0;
+		transform: translateX(30%);
+	}
+	100% {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}

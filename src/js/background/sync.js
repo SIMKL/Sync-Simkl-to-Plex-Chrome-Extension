@@ -19,14 +19,19 @@ class UIEvents {
     });
   };
 
-  static connectFailed = (api = "plex") => {
+  static connectFailed = (api = "plex", errkind = "offline") => {
     // clear start message in ui
     UIEvents.connectDone(api);
     chrome.runtime.sendMessage({
       type: ActionType.action,
+      // TODO: refactor to make it sensible
       action:
         api == "plex"
-          ? ActionType.ui.sync.plex.unexpected
+          ? errkind == "offline"
+            ? ActionType.ui.sync.plex.offline
+            : ActionType.ui.sync.plex.unexpected
+          : errkind == "offline"
+          ? ActionType.ui.sync.simkl.offline
           : ActionType.ui.sync.simkl.unexpected,
     });
   };

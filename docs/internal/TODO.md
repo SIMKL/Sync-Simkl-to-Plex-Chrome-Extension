@@ -33,4 +33,5 @@
 - [ ] Extension uninstall feedback (internal simkl.com) page
 - [ ] (maybe needed) Php code for proxying plex oauth requests
   - This would get rid of the warning message shown by plex's oauth screen.
+  - Not needed I guess, let the warning stay.
 - [ ] Extension icon, name, description
