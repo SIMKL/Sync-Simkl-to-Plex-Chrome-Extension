@@ -192,6 +192,13 @@ const onLoad = async () => {
     "sync-form-custom-time>input"
   );
   const syncNowBtn = document.querySelector("sync-desc-line-2");
+  const customTimeElement = document.querySelector("sync-form-custom-time");
+
+  customTimeElement.addEventListener("animationend", function (event) {
+    if (event.animationName === "slide-out") {
+      customTimeElement.classList.add("hidden");
+    }
+  });
 
   plexBtn.addEventListener("click", async (_) => {
     let { plexOauthToken } = await chrome.storage.sync.get({
@@ -222,6 +229,7 @@ const onLoad = async () => {
   durationInput.addEventListener("change", async (_) => {
     if (durationInput.value == CustomSyncPeriodTag) {
       document.body.classList.add("custom-sync-period");
+      customTimeElement.classList.remove("hidden");
       customDurationInput.value = (
         await chrome.storage.local.get({
           customSyncPeriod: DefaultSyncPeriod,

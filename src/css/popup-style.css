@@ -4,6 +4,11 @@ body {
 	margin: 4px;
 }
 
+html.popupview body {
+	/* force fixed width in popupview */
+	width: 400px;
+}
+
 html:not(.popupview) body {
 	height: 100vh;
 	margin: 0;
@@ -396,7 +401,7 @@ body.custom-sync-period sync-form-custom-time {
 	flex-direction: row;
 	justify-content: space-around;
 	width: var(--form-width);
-
+	height: 44.4px;
 	/* Animation */
 	opacity: 0;
 	transform: translateX(30%);
@@ -405,8 +410,17 @@ body.custom-sync-period sync-form-custom-time {
 }
 
 body:not(.custom-sync-period) sync-form-custom-time {
-	display: none;
+	margin-top: 10px;
+	flex-direction: row;
+	justify-content: space-around;
+	/* transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; */
+	transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+	animation: slide-out 0.2s ease-in-out forwards;
+}
+
+sync-form-custom-time.hidden {
 	visibility: hidden;
+	animation: hidex .2s ease-in-out forwards !important;
 }
 
 sync-form-custom-time input {
@@ -495,5 +509,27 @@ sync-footer-desc::before {
 	100% {
 		opacity: 1;
 		transform: translateX(0);
+	}
+}
+
+@keyframes slide-out {
+	0% {
+		opacity: 1;
+		transform: translateX(0%);
+	}
+
+	100% {
+		opacity: 0;
+		transform: translateX(30%);
+	}
+}
+
+@keyframes hidex {
+	0% {
+		height: 44.4px;
+	}
+
+	100% {
+		height: 0;
 	}
 }
